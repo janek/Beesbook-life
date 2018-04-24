@@ -66,3 +66,25 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     print("SAVED", location_prefix+csv_name)
     
     return location_prefix+csv_name
+
+
+def calc_trip_lengths(presence_df, total_num_intervals):
+    #Takes Presence dataframe and total number of intervals
+    #Returns and array of arrays containing lengths of individual trips of each consecutive bee
+    trip_lengths = []
+
+    for bee in range(0, presence_df.shape[0]):
+        curr_trip_length = 0
+        curr_bee_trip_lenghts = []
+        #fill with trip lengths
+        for interval in range(total_num_intervals): #t: 2880
+            #get the 0/1 value from presence_df at the given (bee, interval)
+            bool_is_present = presence_df.iat[bee, interval]
+            if bool_is_present == 0.0: #bee not present in this interval
+                if curr_trip_length != 0: #if we had a value for a trip length -> means trip ends here -> add it to trips and reset the counter
+                    curr_bee_trip_lenghts.append(curr_trip_length)
+                    curr_trip_length = 0
+            if bool_is_present == 1.0: #bee present in this interval, means trip is underway -> increment the length counter 
+                curr_trip_length += 1
+        trip_lengths.append(curr_bee_trip_lenghts)
+    return trip_lengths
