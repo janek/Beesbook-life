@@ -10,27 +10,34 @@ import bb_utils
 import bb_utils.meta
 import bb_utils.ids
 
+#TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
+cache_location_prefix = "/mnt/storage/janek/caches/" 
+
+
 def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour):
-    location_prefix = "/mnt/storage/janek/caches/" # or ""
+    presence_cache_location_prefix = cache_location_prefix + "Presence/"
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
     csv_name = 'PRESENCE-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'.csv'
-    csv_name_and_location = location_prefix+csv_name
-    return (location_prefix, csv_name, csv_name_and_location)
+    csv_path = presence_cache_location_prefix+csv_name
+    return (csv_name, csv_path)
 
 def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids_from_group):
-    (location_prefix, csv_name, csv_name_and_location) = create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour)
-
+    #TODO: add documentation-style comments
+    
+    
+    (csv_name, csv_path) = create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour)
+    detections_cache_location_prefix = cache_location_prefix + "Detections/"
     #Loading first element before the loop, to have a table formatted nicely for appending
-    start_csv_name = (datetime_start).strftime("%Y-%m-%d_%H:%M:%S")+".csv"
-    print('Processing '+location_prefix+start_csv_name+' before the loop')
+    start_csv_name = "DETECTIONS-"+(datetime_start).strftime("%Y-%m-%d_%H:%M:%S")+".csv"
+    print('Processing '+detections_cache_location_prefix+start_csv_name+' before the loop')
 
-    detections_df = pd.read_csv(location_prefix+start_csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
+    detections_df = pd.read_csv(detections_cache_location_prefix+start_csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
 
     #read and concat a number of hour-long csvs (note: this is because thekla memory crashes if attempting >16h at a time)
     for i in range(1, num_hours):
-        csv_name = (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+".csv"
+        csv_name = "DETECTIONS-" + (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+".csv"
         print('Processing '+csv_name)
-        new_data = pd.read_csv(location_prefix+csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
+        new_data = pd.read_csv(detections_cache_location_prefix+csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
         detections_df = pd.concat([detections_df, new_data])
         print('Num. rows after appending: '+str(detections_df.shape[0])) #TODO: tqdm progress bar 
 
@@ -65,13 +72,12 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
             print(interval,", ", end='') #TODO: tqdm progress bar https://www.youtube.com/watch?v=T0gmQDgPtzY&feature=youtu.be
             
     
+    #Saving intermediate result: the PRESENCE dataframe, with 1's and 0's for bees present in a given interval
+    presence_df.to_csv(csv_path)
     
-    #Saving intermediate result: the presence dataframe, with 1's and 0's for bees present
-    presence_df.to_csv(csv_name_and_location)
+    print("SAVED", csv_path)
     
-    print("SAVED", csv_name_and_location)
-    
-    return csv_name_and_location
+    return csv_path
 
 
 def calc_trip_lengths(presence_df, total_num_intervals):
