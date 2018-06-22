@@ -10,7 +10,7 @@ import bb_utils
 import bb_utils.meta
 import bb_utils.ids
 
-#TODO: defined here, main notebook and file_helpers - where should it be?
+#TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
 cache_location_prefix = "/mnt/storage/janek/caches/" 
 
 
@@ -34,7 +34,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     detections_df = pd.read_csv(detections_cache_location_prefix+start_csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
 
     #read and concat a number of hour-long csvs (note: this is because thekla memory crashes if attempting >16h at a time)
-    for i in range(1, num_hours):
+    for i in tqdm(range(1, num_hours)):
         csv_name = "DETECTIONS-" + (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+".csv"
         print('Processing '+csv_name)
         new_data = pd.read_csv(detections_cache_location_prefix+csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
@@ -56,7 +56,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
     interval_starttime = datetime_start
     # print("Processing intervals: ")
-    for interval in range(total_num_intervals): 
+    for interval in tqdm(range(total_num_intervals)): 
         #choose detections for interval
         interval_endtime = interval_starttime + interval_length
         before = detections_df['timestamp'] >= interval_starttime 
@@ -68,15 +68,11 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
                 presence_df.set_value(bee_row_number, interval, 1)
             bee_row_number += 1 
         interval_starttime = interval_endtime
-        if interval%100 == 0:
-            print(interval,", ", end='') #TODO: tqdm progress bar https://www.youtube.com/watch?v=T0gmQDgPtzY&feature=youtu.be
             
-    
-    #Saving intermediate result: the PRESENCE dataframe, with 1's and 0's for bees present in a given interval
+    #Saving the PRESENCE dataframe, with 1's and 0's for bees present in a given interval
     presence_df.to_csv(csv_path)
     
     print("SAVED", csv_path)
-    
     return csv_path
 
 
