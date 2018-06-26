@@ -10,6 +10,8 @@ import bb_utils
 import bb_utils.meta
 import bb_utils.ids
 
+from tqdm import tqdm
+
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
 cache_location_prefix = "/mnt/storage/janek/caches/" 
 
@@ -21,7 +23,7 @@ def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_
     csv_path = presence_cache_location_prefix+csv_name
     return (csv_name, csv_path)
 
-def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids_from_group):
+def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids):
     #TODO: add documentation-style comments
     
     
@@ -39,7 +41,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         print('Processing '+csv_name)
         new_data = pd.read_csv(detections_cache_location_prefix+csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
         detections_df = pd.concat([detections_df, new_data])
-        print('Num. rows after appending: '+str(detections_df.shape[0])) #TODO: tqdm progress bar 
+        print('Num. rows after appending: '+str(detections_df.shape[0])) 
 
     #interval length is the total observation period divided by total number of intervals
     total_num_intervals = (num_intervals_per_hour*num_hours)
@@ -47,8 +49,8 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
     # prepare dataframe with zeros in the shape [bees x total_num_intervals]
     # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids_from_group),total_num_intervals])) 
-    bee_ids = pd.DataFrame(data={'id': bee_ids_from_group})
+    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),total_num_intervals])) 
+    bee_ids = pd.DataFrame(data={'id': bee_ids})
     presence_df = pd.concat([bee_ids, intervals], axis=1)
     
     #Iterate over intervals and over detections
@@ -69,7 +71,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
             bee_row_number += 1 
         interval_starttime = interval_endtime
             
-    #Saving the PRESENCE dataframe, with 1's and 0's for bees present in a given interval
+    #Saving the ENCE dataframe, with 1's and 0's for bees present in a given interval
     presence_df.to_csv(csv_path)
     
     print("SAVED", csv_path)
@@ -77,11 +79,11 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
 
 def calc_trip_lengths(presence_df, total_num_intervals):
-    #Takes Presence dataframe and total number of intervals
-    #Returns and array of arrays containing lengths of individual trips of each consecutive bee
+    '''Takes a Presence dataframe and total number of intervals
+    Returns and array of arrays containing lengths of individual trips of each consecutive bee'''
     trip_lengths = []
 
-    for bee in range(0, presence_df.shape[0]):
+    for bee in tqdm(range(0, presence_df.shape[0])):
         curr_trip_length = 0
         curr_bee_trip_lenghts = []
         #fill with trip lengths
@@ -131,4 +133,6 @@ def get_all_bee_ids():
     bee_ids_as_ferwar_format = map(lambda i: i.as_ferwar(), bee_ids_as_beesbookid_format) #as ferwar
     return (list(bee_ids_as_ferwar_format), bee_ids_as_beesbookid_format)
 
-#also write a function to get bees alive at a certain day 
+
+#TODO: get bees that are alive on a certain day 
+#TODO: get bees of a certain age for a given day

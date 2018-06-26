@@ -10,18 +10,19 @@ import psycopg2.extras
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from pathlib import Path
+
 
 # bb_backend.api.server_adress = 'localhost:8000'
 connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' 
                  password='' application_name='mehmed'"""
-detection_confidence_requirement = 0.99 #note: 0.99 is pretty high
 
 cache_location_prefix = "/mnt/storage/janek/caches/"
 detections_cache_path = cache_location_prefix + "Detections/"
 
 def delete_detection_caches_for_date(date_string, directory=detections_cache_path):
     ### date_string must be in MM-DD_hh:mm:ss format
-    name_prefix = "DETECTIONS-2016-"
+    name_prefix = "DETECTIONS-"
     removed_count = 0
     for the_file in os.listdir(detections_cache_path):
         if the_file.startswith(name_prefix+date_string):
@@ -34,13 +35,33 @@ def delete_detection_caches_for_date(date_string, directory=detections_cache_pat
                 print(e)
 
 
-def get_detections_from_database(datetime_start, observ_period, num_observ_periods):
+def cache_detections_from_database(datetime_start, observ_period, num_observ_periods, detection_confidence_requirement):
+    """Pulls detections from the Beesbook database 
+    and saves them to disk as (e.g.) "DETECTIONS-2016-08-25.csv" file.
+    
+    Args:
+        datetime_start (datetime): the starting point for observations we want to pull
+        observ_period (timedelta):  size of the window we're going to save to disk
+        num_observ_periods (int):  how many periods we want to save
+    """
+    
+
+    
+    
     print('Beginning at '+datetime_start.strftime("%Y-%m-%d %H:%M:%S"))
 
     for i in tqdm(range(0,num_observ_periods)):
         datetime_end = datetime_start + observ_period
         datetime_str = datetime_start.strftime("%Y-%m-%d_%H:%M:%S")
+        #If this file has already been saved, we're good, just drop it 
 
+        filepath = detections_cache_path+'DETECTIONS-'+datetime_str+'.csv'
+        file = Path(filepath)
+        if file.exists():
+            print("File "+ datetime_str+".csv already exists, dropping")
+            datetime_start = datetime_end
+            continue
+        
         print('Getting hour #'+str(i)+', beginning at '+datetime_str)
         start = time.time()
         with psycopg2.connect(connect_str) as conn:
