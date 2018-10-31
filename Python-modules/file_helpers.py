@@ -19,7 +19,9 @@ import os
 connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' 
                  password='' application_name='mehmed'"""
 #removed storage from filepath
-cache_location_prefix = "../caches/"
+
+#TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
+cache_location_prefix = "../../caches/"
 detections_cache_path = cache_location_prefix + "Detections/"
 
 
@@ -38,8 +40,7 @@ def delete_detection_caches_for_date(date_string, directory=detections_cache_pat
                 print(e)
 
 
-#TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = "../caches/" 
+
 
 
 def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour):

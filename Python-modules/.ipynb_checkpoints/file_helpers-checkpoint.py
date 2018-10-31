@@ -19,7 +19,9 @@ import os
 connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' 
                  password='' application_name='mehmed'"""
 #removed storage from filepath
-cache_location_prefix = "../caches/"
+
+#TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
+cache_location_prefix = "../../caches/"
 detections_cache_path = cache_location_prefix + "Detections/"
 
 
@@ -38,8 +40,7 @@ def delete_detection_caches_for_date(date_string, directory=detections_cache_pat
                 print(e)
 
 
-#TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = "../caches/" 
+
 
 
 def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour):
@@ -545,7 +546,7 @@ def calculate_bee_lifespans_from_hatchdates():
         life_span = pd.concat([life_span, temp_life_span])
     life_span.index = last_day_alive_df['bee_id']
     life_span = life_span['life_span']
-#     life_span = filter_out_fake_deaths(lifespans)
+    life_span = filter_out_fake_deaths(life_span)
     return life_span   
 
     #TODO: returns a Series, while other two lifespan functions return a Dateframe
@@ -558,7 +559,7 @@ def calculate_bee_lifespans_from_detections():
 
     diff = (last_day_alive_df['max'] - first_day_alive_df['min']).dt.days
     diff.index = last_day_alive_df['bee_id']
-#     diff = filter_out_fake_deaths(diff)
+    diff = filter_out_fake_deaths(diff)
     return diff
 
 def calculate_bee_lifespans_combined():
@@ -591,7 +592,12 @@ def calculate_bee_lifespans_combined():
     life_span = filter_out_fake_deaths(life_span)
     return life_span  
 
+
+
+
 def filter_out_fake_deaths(lifespans):
+    '''Filters out bee ids whose last detections landed on the last day of the experiment,
+    because they shouldn't be interpreted as deaths.'''
     last_alive_path = detections_cache_path+'Last_day_alive.csv'
     last_day_alive_df = pd.read_csv(last_alive_path, 
                                     parse_dates=['max'], 
