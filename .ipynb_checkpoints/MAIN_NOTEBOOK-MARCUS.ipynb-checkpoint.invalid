@@ -1,0 +1,121 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.5/dist-packages/psycopg2/__init__.py:144: UserWarning: The psycopg2 wheel package will be renamed from release 2.8; in order to keep installing from binary please use \"pip install psycopg2-binary\" instead. For details see: <http://initd.org/psycopg/docs/install.html#binary-install-from-pypi>.\n",
+      "  \"\"\")\n"
+     ]
+    }
+   ],
+   "source": [
+    "%matplotlib inline\n",
+    "#TODO: cleanup imports\n",
+    "import matplotlib.pyplot as plt\n",
+    "import matplotlib\n",
+    "import math\n",
+    "import seaborn as sns\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import psycopg2\n",
+    "import psycopg2.extras\n",
+    "from datetime import timedelta, datetime\n",
+    "import bee_helpers as bh\n",
+    "from bee_helpers import calc_trip_lengths, calc_trip_starts,get_forager_bee_ids, get_random_bee_ids, get_all_bee_ids\n",
+    "from file_helpers import detections_to_presence, detections_to_presence_locations, create_presence_cache_filename, create_presence_cache_filename, create_presence_locations_cam_cache_filename,create_presence_locations_cache_filename,cache_location_prefix \n",
+    "import time\n",
+    "\n",
+    "from tqdm import tqdm_notebook\n",
+    "from tqdm import tqdm\n",
+    "from pathlib import Path\n",
+    "\n",
+    "import bb_utils\n",
+    "import bb_utils.meta\n",
+    "import bb_utils.ids\n",
+    "import bb_backend\n",
+    "from bb_backend.api import FramePlotter, VideoPlotter\n",
+    "from bb_backend.api import get_plot_coordinates, transform_axis_coordinates, get_image_origin\n",
+    "\n",
+    "\n",
+    "from collections import Counter\n",
+    "\n",
+    "bb_backend.api.server_adress = 'localhost:8000'\n",
+    "connect_str = \"\"\"dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' \n",
+    "                 password='' application_name='mehmed'\"\"\"\n",
+    "\n",
+    "meta = bb_utils.meta.BeeMetaInfo()\n",
+    "\n",
+    "meta1 = bb_utils.meta\n",
+    "BeesbookID = bb_utils.ids.BeesbookID"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Define constant parameters "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Starting from 2016-08-29 00:00:00 with number of hours: 24\n",
+      "Bin size for the trip lengths plot: 24\n",
+      "Number of intervals per hour: 60\n",
+      "Rolling win size: 11\n"
+     ]
+    }
+   ],
+   "source": [
+    "#TODO: Constants cannot be defined twice! (here and DB_TO_DETECTIONS)\n",
+    "#TODO: Remove unused consts\n",
+    "#potential solution: google jupyter magic/jupyter constant definition \n",
+    "\n",
+    "\n",
+    "#Parameters for loading data, currently using known date of 23th, august 2016)\n",
+    "num_hours = 24\n",
+    "num_days_to_process = 15\n",
+    "\n",
+    "datetime_start = datetime(2016, 8, 29)\n",
+    "\n",
+    "#Parameters for presenting data\n",
+    "bin_size_in_hours = 24\n",
+    "\n",
+    "#Hyperparameters for the data wrangling process\n",
+    "num_intervals_per_hour = 60\n",
+    "num_intervals_per_minute = num_intervals_per_hour/60\n",
+    "rolling_window_size = 11\n",
+    "\n",
+    "total_num_intervals = (num_intervals_per_hour*num_hours)\n",
+    "\n",
+    "print(\"Starting from\", datetime_start, \"with number of hours:\", num_hours)\n",
+    "print(\"Bin size for the trip lengths plot:\", bin_size_in_hours)\n",
+    "print(\"Number of intervals per hour:\", num_intervals_per_hour)\n",
+    "print(\"Rolling win size:\", rolling_window_size)\n",
+    "#(NOTE: First detections are on 20.07.2016, last are 19.09.2016 (3 months duration))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Get a group of bees to work on and calculate their ages"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+ 
