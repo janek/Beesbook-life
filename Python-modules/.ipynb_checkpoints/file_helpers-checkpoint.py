@@ -39,10 +39,6 @@ def delete_detection_caches_for_date(date_string, directory=detections_cache_pat
             except Exception as e:
                 print(e)
 
-
-
-
-
 def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour):
     presence_cache_location_prefix = cache_location_prefix + "Presence/"
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
@@ -286,11 +282,11 @@ def detections_to_presence_locations(num_hours, datetime_start, num_intervals_pe
                 #locx = (x_c[0], y_c[0])
                 coordinates = (round(x_c), round(y_c))
                 presence_df[interval] = presence_df[interval].astype(object)
-                presence_df.set_value(bee_row_number, interval, coordinates)
+                presence_df.set_value(bee_row_number, interval, coordinates) #deprecation: change to presence_df.iat[x,y] = z
             bee_row_number += 1 
         interval_starttime = interval_endtime
             
-    #Saving the ENCE dataframe, with 1's and 0's for bees present in a given interval
+    #Saving the PRESENCE dataframe, with 1's and 0's for bees present in a given interval
     presence_df.to_csv(csv_path)
     print("SAVED", csv_path)
     return csv_path
@@ -365,7 +361,6 @@ def detections_to_presence_locations_front(num_hours, datetime_start, num_interv
 
 def detections_to_presence_locations_back(num_hours, datetime_start, num_intervals_per_hour, bee_ids):
     #TODO: add documentation-style comments
-    
     
     (csv_name, csv_path) = create_presence_locations_cam_cache_filename(num_hours, datetime_start, num_intervals_per_hour, "back/")
     detections_cache_location_prefix = cache_location_prefix + "Detections/"
