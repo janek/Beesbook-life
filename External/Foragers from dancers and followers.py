@@ -1,32 +1,17 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[143]:
-
+import os
+os.getcwd()
 
 import pandas as pd
-import numpy as np
-
-
-# In[150]:
-
-
 import bb_utils
-import bb_utils.meta
-from bb_utils.ids import BeesbookID
 
-
-# In[164]:
-
-
-dance_events = pd.read_csv("../../datasets/foragergroups/full_data_marie23.csv", index_col=0) #751 x 28/29
+dance_events = pd.read_csv(os.getcwd()+"/datasets/foragergroups/full_data_marie23.csv", index_col=0) #751 x 28/29
 dance_events = dance_events[dance_events.following == True]
 print(list(dance_events.columns))
 
 
-# ### Get a list of dancers and recruits along with the date of the dance
+dance_events.shape
 
-# In[165]:
+# Get a list of dancers and recruits along with the date of the dance
 
 
 dancers = dance_events[['dancer','video_date']]
@@ -41,7 +26,7 @@ dancers.rename(columns = {'dancer' : 'bee_id'}, inplace=True)
 recruits = dance_events[['recruit','video_date']]
 recruits = recruits.dropna()
 recruits['role'] = 'recruit'
-recruits.rename(columns = {'recruit' : 'bee_id'}, inplace=True) 
+recruits.rename(columns = {'recruit' : 'bee_id'}, inplace=True)
 
 
 # In[151]:
@@ -58,12 +43,7 @@ foragers.bee_id = foragers.bee_id.apply(lambda ID: bb_utils.ids.BeesbookID.from_
 
 foragers
 
-
-# In[ ]:
-
-
 # Future work: (nullified if we only get 13 bees from this anyway)
-# compare dancers and followers agains each other,
+# compare dancers and followers against each other,
 # maybe see if the length of the dance makes a difference?
 # what other features of this could be meaningful?
-

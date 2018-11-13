@@ -1,20 +1,15 @@
-# import os 
+import os
 print(os.getcwd())
 
 import sys
 sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/')
-
-print(sys.path)
-
 from file_helpers import cache_hatch_dates, calculate_bee_lifespans_from_hatchdates, calculate_bee_lifespans_from_detections, calculate_bee_lifespans_combined
-from datetime import timedelta, datetime
-import time
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import bb_utils.meta
 get_ipython().run_line_magic('matplotlib', 'inline')
-meta = bb_utils.meta.BeeMetaInfo()
+
 
 cache_location_prefix = os.getcwd()+"/caches/"
 detections_cache_path = cache_location_prefix + "Detections/"
@@ -24,16 +19,6 @@ h = calculate_bee_lifespans_from_hatchdates()
 d = calculate_bee_lifespans_from_detections()
 c = calculate_bee_lifespans_combined()
 diff = h - d
-
-
-# In[15]:
-
-
-c
-
-
-# In[4]:
-
 
 def plot_missing_data(lifespans, title_suffix=""):
     null_ids = lifespans[lifespans.isnull()].index.to_series()
@@ -215,10 +200,6 @@ surv = surv/surv.max()
 
 
 surv.plot(figsize=(20,10))
-
-
-# In[1]:
-
 
 # TODO: there are bees that were tagged *before* the observation period,
 # so that could account for part of the difference between the hatchdates and the first detections

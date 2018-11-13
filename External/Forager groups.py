@@ -1,41 +1,28 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[3]:
+import os
+print(os.getcwd())
 
 
 import bb_utils
-import bb_utils.meta
-from bb_utils.ids import BeesbookID
 import bb_backend
 import numpy as np
-import pandas as pd 
+import pandas as pd
 
 
-# In[4]:
-
-
-connect_str = """dbname='beesbook' 
-                 user='reader' 
-                 host='tonic.imp.fu-berlin.de' 
-                 password='' 
+connect_str = """dbname='beesbook'
+                 user='reader'
+                 host='tonic.imp.fu-berlin.de'
+                 password=''
                  application_name='sammelgruppen'"""
-
-
-# In[5]:
 
 
 meta = bb_utils.meta.BeeMetaInfo()
 
 
-# In[6]:
+# This file collects known (ground truth) forager bee IDs, together with the date they were foraging on.
+# The source for the data are forager groups (defined in the database).
 
 
 all_groups_indices = np.arange(1,26)
-
-
-# In[54]:
-
 
 all_groups_dataframes = []
 
@@ -48,20 +35,9 @@ for i in all_groups_indices:
     all_groups_dataframes.append(group_df)
 
 all_groups_df = pd.concat(all_groups_dataframes)
-all_groups_df
-
-
-# In[55]:
-
 
 all_groups_df.bee_id_dec12 = all_groups_df.bee_id_dec12.apply(lambda ID: bb_utils.ids.BeesbookID.from_dec_12(ID).as_ferwar())
 all_groups_df.rename(columns={'bee_id_dec12' : 'bee_id'}, inplace=True)
 all_groups_df.index = all_groups_df.bee_id
 all_groups_df.drop(columns='bee_id')
-
-
-# In[ ]:
-
-
-
-
+all_groups_df.to_pickle(os.getcwd()+'/caches/Other/foragers_from_groups.pkl')

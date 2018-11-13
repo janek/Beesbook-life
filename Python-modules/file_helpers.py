@@ -22,7 +22,7 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #removed storage from filepath
 
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = os.getcwd()+'/Beesbook-life/caches'
+cache_location_prefix = os.getcwd()+"/caches/"
 detections_cache_path = cache_location_prefix + "/Detections/"
 
 
@@ -602,4 +602,3 @@ def filter_out_fake_deaths(lifespans):
     last_date = last_day_alive_df['max'].max()
     bees_with_fake_deaths = last_day_alive_df['bee_id'].drop(last_day_alive_df[last_day_alive_df['max'] != last_date].index)
     return lifespans.drop(bees_with_fake_deaths)
-    

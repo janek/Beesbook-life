@@ -153,7 +153,7 @@ sns.lineplot(data=pres_by_ages.iloc[20])
 # In[ ]:
 
 
-sns.lineplot(data=pres_by_ages.iloc[2500])
+sns.lineplot(data=pres_by_ages.iloc[1500])
 
 
 
@@ -173,25 +173,9 @@ sns.lineplot(data=pres_by_ages.iloc[2500])
 (pres_by_ages.isna().sum(axis=0)/pres_by_ages.shape[0]).head()
 
 
-# In[86]:
-
-
-
-
-# In[222]:
-
-
-
-
-
-# In[226]:
 
 
 daily_presences.shape
-
-
-# In[ ]:
-
 
 
 
@@ -203,19 +187,6 @@ pres_by_ages
 
 
 # In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[127]:
-
 
 
 
