@@ -1,40 +1,29 @@
+# import os 
+print(os.getcwd())
 
-# coding: utf-8
+import sys
+sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/')
 
-# In[2]:
+print(sys.path)
 
-
-import sys 
-sys.path.append('../Python-modules/')
-from file_helpers import cache_hatch_dates, calculate_bee_lifespans_from_hatchdates, calculate_bee_lifespans_from_detections, calculate_bee_lifespans_combined 
+from file_helpers import cache_hatch_dates, calculate_bee_lifespans_from_hatchdates, calculate_bee_lifespans_from_detections, calculate_bee_lifespans_combined
 from datetime import timedelta, datetime
 import time
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import bb_utils.meta
 get_ipython().run_line_magic('matplotlib', 'inline')
 meta = bb_utils.meta.BeeMetaInfo()
 
-cache_location_prefix = "../../caches/"
+cache_location_prefix = os.getcwd()+"/caches/"
 detections_cache_path = cache_location_prefix + "Detections/"
-
-
-# ### Goal
-# 
-# This notebook was made to produce some basic plots, but can (and maybe should) be used to filter out suspicious bee_ids from the dataset (like 0-day lifespans of lifespans that end on the same day as the experiment).
-# 
-# 
-# It should also produce a table with birth day, death, and lifespan for each bee_id. It could require revision to make sure the method of obtaining them was the best available.
-# 
-
-# In[9]:
 
 
 h = calculate_bee_lifespans_from_hatchdates()
 d = calculate_bee_lifespans_from_detections()
 c = calculate_bee_lifespans_combined()
-diff = h - d 
+diff = h - d
 
 
 # In[15]:
@@ -89,8 +78,8 @@ diff.hist(bins=72, ax=ax4)
 
 
 last_day_detected_path = detections_cache_path+'Last_day_alive.csv'
-last_day_detected_df = pd.read_csv(last_day_detected_path, 
-                                parse_dates=['max'], 
+last_day_detected_df = pd.read_csv(last_day_detected_path,
+                                parse_dates=['max'],
                                 usecols=['max', 'bee_id'])
 fig = plt.figure(figsize=(15,7))
 ax1 = fig.add_subplot(211, title="Distribution of last detections (approximated death dates)")
@@ -98,8 +87,8 @@ last_day_detected_df['max'].hist(bins=last_day_detected_df['max'].nunique())
 
 
 first_day_detected_path = detections_cache_path+'First_day_alive.csv'
-first_day_detected_df = pd.read_csv(first_day_detected_path, 
-                                parse_dates=['min'], 
+first_day_detected_df = pd.read_csv(first_day_detected_path,
+                                parse_dates=['min'],
                                 usecols=['min', 'bee_id'])
 ax2 = fig.add_subplot(212, title="Distribution of first detections (approximated birth/marking dates)")
 
@@ -169,7 +158,7 @@ for day in hivedays:
     survivors_on_day = 0
     for index, bee in lifespans_and_deaths_df.iterrows():
         if day >= bee['min'] and day <= bee['max']:
-            survivors_on_day += 1 
+            survivors_on_day += 1
     survivors.append(survivors_on_day)
 
 
@@ -231,6 +220,5 @@ surv.plot(figsize=(20,10))
 # In[1]:
 
 
-# TODO: there are bees that were tagged *before* the observation period, 
+# TODO: there are bees that were tagged *before* the observation period,
 # so that could account for part of the difference between the hatchdates and the first detections
-
