@@ -1,3 +1,4 @@
+#% 
 import os
 print(os.getcwd())
 
@@ -18,7 +19,7 @@ from file_helpers import cache_location_prefix, detections_to_presence, detectio
 from pathlib import Path
 from tqdm import tqdm
 
-
+#%
 
 datetime_start = datetime(2016, 7, 20) #TODO: set beginning date as default param in file helpers
 num_days_to_process = 60
