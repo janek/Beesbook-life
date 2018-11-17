@@ -28,4 +28,4 @@ forager_lives_short.head()
 sns.distplot(forager_lives_short.foraging_min_age.dt.days, bins=10, kde=False)
 
 
-# Presence charts for all 50 bees that were foraging, with foraging periods marked 
+# Presence charts for all 50 bees that were foraging, with foraging periods marked

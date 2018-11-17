@@ -22,7 +22,7 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #removed storage from filepath
 
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = os.getcwd()+"/caches"
+cache_location_prefix = os.getcwd()+"/caches/"
 detections_cache_path = cache_location_prefix + "/Detections/"
 
 
@@ -45,7 +45,6 @@ def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
     csv_name = 'PRESENCE-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'.csv'
     csv_path = presence_cache_location_prefix+csv_name
-    print("HALO")
     return (csv_name, csv_path)
 
 def create_presence_locations_cam_cache_filename(num_hours, datetime_start, num_intervals_per_hour, orientation):
@@ -529,6 +528,11 @@ def last_days_caches(num_hours, num_intervals_per_hour, number_last_days):
     print('Saved last day caches for all bees')
 
 def calculate_bee_lifespans_from_hatchdates():
+    """
+    Uses the Last_day_alive.csv cache and the get_hatchdate functions from bb_utils
+    to calculate the lifespan (length-of-life) in days for each bee. The lifespan will be NaN if hatchdate is NaT.
+
+    """
     meta = bb_utils.meta.BeeMetaInfo()
     last_alive_path = detections_cache_path+'Last_day_alive.csv'
     last_day_alive_df = pd.read_csv(last_alive_path,
@@ -536,15 +540,15 @@ def calculate_bee_lifespans_from_hatchdates():
                                     usecols=['max', 'bee_id'])
 
     last_day_alive_df.index = last_day_alive_df['bee_id']
-    life_span = pd.DataFrame()
+    lifespan = pd.DataFrame()
     for ix in last_day_alive_df['bee_id']:
         birthday = meta.get_hatchdate(bb_utils.ids.BeesbookID.from_dec_9(ix)).date()
-        temp_life_span = pd.DataFrame([[ix, (last_day_alive_df.loc[ix]['max'].date() - birthday).days]], columns=['id','life_span'])
-        life_span = pd.concat([life_span, temp_life_span])
-    life_span.index = last_day_alive_df['bee_id']
-    life_span = life_span['life_span']
-    life_span = filter_out_fake_deaths(life_span)
-    return life_span
+        temp_lifespan = pd.DataFrame([[ix, (last_day_alive_df.loc[ix]['max'].date() - birthday).days]], columns=['id','lifespan'])
+        lifespan = pd.concat([lifespan, temp_lifespan])
+    lifespan.index = last_day_alive_df['bee_id']
+    lifespan = lifespan['lifespan']
+    lifespan = filter_out_fake_deaths(lifespan)
+    return lifespan
 
     #TODO: returns a Series, while other two lifespan functions return a Dateframe
 def calculate_bee_lifespans_from_detections():
@@ -577,24 +581,24 @@ def calculate_bee_lifespans_combined():
 
     lifespan_from_detections = calculate_bee_lifespans_from_detections()
 
-    life_span = pd.DataFrame()
+    lifespan = pd.DataFrame()
     for ix in last_day_alive_df['bee_id']:
         birthday = meta.get_hatchdate(bb_utils.ids.BeesbookID.from_dec_9(ix)).date()
         if pd.isnull(birthday):
             birthday = first_day_alive_df.loc[ix]['min'].date()
-        temp_life_span = pd.DataFrame([[ix, (last_day_alive_df.loc[ix]['max'].date() - birthday).days]], columns=['id','life_span'])
-        life_span = pd.concat([life_span, temp_life_span])
-    life_span.index = last_day_alive_df['bee_id']
-    life_span = life_span['life_span']
-    life_span = filter_out_fake_deaths(life_span)
-    return life_span
-
+        temp_lifespan = pd.DataFrame([[ix, (last_day_alive_df.loc[ix]['max'].date() - birthday).days]], columns=['id','lifespan'])
+        lifespan = pd.concat([lifespan, temp_lifespan])
+    lifespan.index = last_day_alive_df['bee_id']
+    lifespan = lifespan['lifespan']
+    lifespan = filter_out_fake_deaths(lifespan)
+    return lifespan
 
 
 
 def filter_out_fake_deaths(lifespans):
-    '''Filters out bee ids whose last detections landed on the last day of the experiment,
-    because they shouldn't be interpreted as deaths.'''
+    """Takes a lifespans dataframe and filters out bee ids
+    whose last detections landed on the last day of the experiment,
+    because they shouldn't be interpreted as deaths."""
     last_alive_path = detections_cache_path+'Last_day_alive.csv'
     last_day_alive_df = pd.read_csv(last_alive_path,
                                     parse_dates=['max'],

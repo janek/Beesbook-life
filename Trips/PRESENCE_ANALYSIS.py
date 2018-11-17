@@ -1,4 +1,4 @@
-#% 
+# In: []
 import os
 print(os.getcwd())
 
@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-
+sns.set()
 from datetime import timedelta, datetime
 import sys
 
 sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/') #For bee_helpers and file_helpers
+# sys.path.append('/home/mi/rrszynka/mnt/janek/Beesbook-life/Python-modules/')
 from bee_helpers import calc_trip_lengths, calc_trip_starts, get_forager_bee_ids, get_random_bee_ids, get_all_bee_ids
 from file_helpers import cache_location_prefix, detections_to_presence, detections_to_presence_locations, create_presence_cache_filename, create_presence_locations_cache_filename, create_presence_cache_filename, cache_location_prefix, create_presence_locations_cam_cache_filename
 
@@ -75,8 +75,10 @@ presence_with_lifespan_work = presence_with_lifespan_fil[presence_with_lifespan_
 %matplotlib inline
 
 preshist = (presence_with_lifespan_work[presence_with_lifespan_work.presence_coefficient > 0.03]).presence_coefficient
+title = 'Distribution of presence_coefficient values among ' + str(len(preshist)) + ' bees. \n(a value of 1.0 would mean 100% presence in the hive)'
 plt.subplots(figsize=(20,8))
-sns.distplot(preshist, bins=100)
+ax = sns.distplot(preshist, bins=100, kde=False)
+ax.set(title=title)
 
 
 
@@ -90,6 +92,7 @@ pres_by_minute = presence_df.sum(axis='rows')
 # In[62]:
 
 #convert from intervals (minutes) to hours
+
 pres_by_hour = []
 for i in np.arange(0, 24*59): #24hours * 59 days
     newHour = pres_by_minute[i*60:(i+1)*60].sum()
@@ -110,7 +113,7 @@ for i in np.arange(0, 59): #59 days
     daily_presences.append(day.sum(axis=1))
 
 
-daily_presences.shape
+
 #%
 presence_with_lifespan_long_lives = presence_with_lifespan_work[presence_with_lifespan_work['lifespan'] > 15]
 presence_with_lifespan_long_lives.shape
@@ -139,26 +142,35 @@ for day in tqdm(pres_by_ages.columns):
             pres_by_ages.loc[bee, day] = daily_presences.loc[bee, experiment_day]
 
 
-
-sns.lineplot(data=pres_by_ages.sum())
-
-
 pres_by_ages_per_bee = pres_by_ages.sum()/(pres_by_ages.isnull() == False).sum()
 sns.lineplot(data=pres_by_ages_per_bee)
 
 
 
-pres_by_ages.iloc[20]
-
-sns.lineplot(data=pres_by_ages.iloc[20])
+sns.lineplot(data=pres_by_ages.iloc[22])
 # In[ ]:
 
 
-sns.lineplot(data=pres_by_ages.iloc[1500])
+
+foragers_from_groups = pd.read_pickle(os.getcwd()+'/caches/Other/foragers_from_groups.pkl').drop(columns=['bee_id'])
+
+forager_lives = pd.merge(lives_from_detections_df, foragers_from_groups, how='inner', on='bee_id')
 
 
+forager_lives.rename(columns={'min':'born', 'max':'died', 'date': 'foraging_min_date'}, inplace=True)
+forager_lives_short = forager_lives[~forager_lives.index.duplicated()]
 
 
+foraging_max_date = forager_lives[~forager_lives.index.duplicated(keep='last')].foraging_min_date.rename('foraging_max_date')
+forager_lives_short = pd.merge(forager_lives_short, pd.DataFrame(foraging_max_date), how='inner', on='bee_id')
+forager_lives_short = forager_lives_short.drop(columns=["group_id", "location"])
+
+forager_lives_short['foraging_min_age'] = (forager_lives_short.foraging_min_date - forager_lives_short.born)
+forager_lives_short['foraging_max_age'] = (forager_lives_short.foraging_max_date - forager_lives_short.born)
+
+forager_lives_short.head()
+
+sns.lineplot(data=pres_by_ages.loc[199])
 
 # bee_life_day = bee_birth_day+timedelta(day)
 # bee_birth_day = presence_with_lifespan_work.loc[4]['min']
@@ -184,15 +196,10 @@ daily_presences.shape
 # In[252]:
 
 
-pres_by_ages
 
 
 # In[ ]:
 
-
-
-
-# In[144]:
 
 
 fig, ax = plt.subplots()

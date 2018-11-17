@@ -12,7 +12,7 @@ get_ipython().run_line_magic('matplotlib', 'inline')
 
 
 cache_location_prefix = os.getcwd()+"/caches/"
-detections_cache_path = cache_location_prefix + "Detections/"
+detections_cache_path = cache_location_prefix + "/Detections/"
 
 
 h = calculate_bee_lifespans_from_hatchdates()
@@ -20,10 +20,13 @@ d = calculate_bee_lifespans_from_detections()
 c = calculate_bee_lifespans_combined()
 diff = h - d
 
+h.head()
+
+
 def plot_missing_data(lifespans, title_suffix=""):
     null_ids = lifespans[lifespans.isnull()].index.to_series()
     zeros_ids = lifespans[lifespans==0].index.to_series()
-    fig = plt.figure(figsize=(25,1))
+    fig = plt.figure(figsize=(23,1))
     ax = fig.add_subplot(111, title = "NaTs and zeroes " + title_suffix)
     ax.set_xlim(0, 4096)
     plt.plot(null_ids, np.zeros_like(null_ids), '|')
@@ -31,6 +34,7 @@ def plot_missing_data(lifespans, title_suffix=""):
 
 
 # In[5]:
+
 
 
 plot_missing_data(h, "for lifespans determined from hatchdates and last detections")
@@ -43,6 +47,8 @@ print("There are", len(c) - len(c.nonzero()[0]), "0-day lifespans in lifespans c
 
 
 # In[6]:
+
+
 
 
 fig=plt.figure(figsize=(20,10))
@@ -107,11 +113,11 @@ last_day_detected_df.shape == first_day_detected_df.shape == (2985,1) and lifesp
 
 lives_from_detections_df = first_day_detected_df.join(last_day_detected_df, how='outer').join(lifespans_from_detections, how='outer')
 
-
+lives_from_detections_df
 # In[96]:
 
 
-lives_from_detections_df.to_csv('../../caches/Other/lives_from_detections_df.csv')
+lives_from_detections_df.to_csv(os.getcwd()+'/caches/Other/lives_from_detections_df.csv')
 
 
 # In[ ]:
@@ -157,7 +163,6 @@ survivors_per_day_num = survivors_per_day.drop(['date'], axis=1)
 
 
 # In[100]:
-
 
 ax = survivors_per_day_num.plot(figsize=(20,10), legend=None)
 ax.set_xlabel("Day of colony's lifespan")
