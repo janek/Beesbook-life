@@ -23,7 +23,7 @@ def calc_trip_lengths(presence_df, total_num_intervals):
         #fill with trip lengths
         for interval in range(total_num_intervals): #t: 2880
             #get the 0/1 value from presence_df at the given (bee, interval)
-            bool_is_present = presence_df.iat[bee, interval]
+            bool_is_present = presence_df.iloc[bee, interval]
             if bool_is_present == 1.0: #bee present in this interval
                 if curr_trip_length != 0: #if we had a value for a trip length -> means trip ends here -> add it to trips and reset the counter
                     curr_bee_trip_lenghts.append(curr_trip_length)

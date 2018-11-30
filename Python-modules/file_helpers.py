@@ -22,8 +22,8 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #removed storage from filepath
 
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = os.getcwd()+"/caches/"
-detections_cache_path = cache_location_prefix + "/Detections/"
+cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/"
+detections_cache_path = cache_location_prefix + "Detections/"
 
 
 def delete_detection_caches_for_date(date_string, directory=detections_cache_path):
@@ -40,8 +40,12 @@ def delete_detection_caches_for_date(date_string, directory=detections_cache_pat
             except Exception as e:
                 print(e)
 
-def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour):
-    presence_cache_location_prefix = cache_location_prefix + "/Presence/"
+def create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour, locations=False, orientation=-1):
+    presence_cache_location_prefix = cache_location_prefix + "Presence/"
+    if locations:
+        presence_cache_location_prefix += "locations/"
+    if orientation != -1:
+        presence_cache_location_prefix += "cam/"+orientation
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
     csv_name = 'PRESENCE-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'.csv'
     csv_path = presence_cache_location_prefix+csv_name
