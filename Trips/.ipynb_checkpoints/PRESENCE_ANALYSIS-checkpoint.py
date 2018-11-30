@@ -43,30 +43,26 @@ for i in tqdm(range(0, num_days_to_process)):
         # print("Adding df #"+str(i)+", "+csv_name)
 
 
-        
+presence_df = pd.concat(presence_dfs, axis=1)
+presence_df.index.rename('bee_id', inplace=True)
+
 # Saving and loading cache (should not normally be needed, as it seems to work faster to use the code above)
 # presence_df.to_csv('../../caches/Presence/COMBINED_PRESENCE_59d_24h_from_07-19.csv')
 # presence_df = pd.read_csv('../../caches/Presence/COMBINED_PRESENCE_59d_24h_from_07-19.csv', index_col='bee_id')
 
 
-presence_df = pd.concat(presence_dfs, axis=1)
-presence_df.index.rename('bee_id', inplace=True)
 
-
+presence_df.head()
 sum_pres_by_bee = presence_df.sum(axis=1)
 sum_pres_by_bee = sum_pres_by_bee.to_frame()
 sum_pres_by_bee.columns = ['presence_score_total']
 
-
-
-
-
-lives_from_detections_df = pd.read_csv(os.getcwd()+'/caches/Other/lives_from_detections_df.csv', 
-                                       index_col='bee_id', 
-                                       parse_dates=['min', 'max'])
+lives_from_detections_df = pd.read_csv(os.getcwd()+'/caches/Other/lives_from_detections_df.csv', index_col='bee_id', parse_dates=['min', 'max'])
 
 
 sum_pres_by_bee.head()
+
+
 lives_from_detections_df.head()
 
 
