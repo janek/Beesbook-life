@@ -1,8 +1,6 @@
-
 # coding: utf-8
-
-# In[7]:
-
+import os
+print(os.getcwd())
 
 get_ipython().run_line_magic('matplotlib', 'inline')
 
@@ -16,7 +14,11 @@ import psycopg2
 import psycopg2.extras
 from datetime import timedelta, datetime
 import bee_helpers as bh
-from bee_helpers import cache_location_prefix, detections_to_presence, calc_trip_lengths, get_forager_bee_ids, get_random_bee_ids, get_all_bee_ids, create_presence_cache_filename
+sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/')
+sys.path
+from bee_helpers import calc_trip_lengths, calc_trip_starts, get_forager_bee_ids, get_random_bee_ids, get_all_bee_ids
+from file_helpers import cache_location_prefix, detections_to_presence, detections_to_presence_locations, create_presence_cache_filename, create_presence_locations_cache_filename, create_presence_cache_filename, cache_location_prefix, create_presence_locations_cam_cache_filename
+
 import time
 
 
@@ -36,13 +38,13 @@ BeesbookID = bb_utils.ids.BeesbookID
 
 
 #TODO: Constants cannot be defined twice! (here and DB_TO_DETECTIONS)
-#potential solution: google jupyter magic/jupyter constant definition 
+#potential solution: google jupyter magic/jupyter constant definition
 
 
 #Parameters for loading data, currently using known date of 23th, august 2016)
-num_hours = 12
+num_hours = 24
 
-datetime_start = datetime(2016, 8, 24)
+datetime_start = datetime(2016, 7, 20)
 
 #Parameters for presenting data
 bin_size_in_hours = 24
@@ -67,7 +69,7 @@ print("Rolling win size:", rolling_window_size)
 #Loading the csv of intermediate result (saved from prevoius cell)
 #example value: "/mnt/storage/janek/caches/Presence/PRESENCE-2016-08-23_00_num_hours_24_int_size_120.csv"
 
-#NOTE: the presence cache does not yet know what bees it contains! 
+#NOTE: the presence cache does not yet know what bees it contains!
 (csv_name, csv_path) = create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour)
 
 
@@ -83,7 +85,7 @@ presence_df.shape
 
 
 #TODO: Constants cannot be defined twice! (here and DB_TO_DETECTIONS)
-#potential solution: google jupyter magic/jupyter constant definition 
+#potential solution: google jupyter magic/jupyter constant definition
 
 
 #Parameters for loading data, currently using known date of 23th, august 2016)
@@ -106,4 +108,3 @@ print("Bin size for the trip lengths plot:", bin_size_in_hours)
 print("Number of intervals per hour:", num_intervals_per_hour)
 print("Rolling win size:", rolling_window_size)
 #(NOTE: First detections are on 20.07.2016, last are 19.09.2016 (3 months duration))
-
