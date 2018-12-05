@@ -34,7 +34,7 @@ def cache_detections_from_database(datetime_start, observ_period, num_observ_per
         datetime_start (datetime): the starting point for observations we want to pull
         observ_period (timedelta):  size of the window we're going to save to disk
         num_observ_periods (int):  how many periods we want to save
-        detection_confidence_requirement (float): how high the database value for detection confidence needs to be 
+        detection_confidence_requirement (float): how high the database value for detection confidence needs to be
     """
 
 
@@ -75,23 +75,23 @@ def cache_detections_from_database(datetime_start, observ_period, num_observ_per
         datetime_start = datetime_end
 
 
-        
-def create_presence_cache_filename(num_hours, 
-                                   datetime_start, 
-                                   num_intervals_per_hour, 
-                                   locations=False, 
-                                   cam_orientation='none', 
+
+def create_presence_cache_filename(num_hours,
+                                   datetime_start,
+                                   num_intervals_per_hour,
+                                   locations=False,
+                                   cam_orientation='none',
                                    method='binary',
                                    detection_confidence_requirement=0):
-    
+
     presence_cache_location_prefix = cache_location_prefix + "Presence/"
-    
+
     if locations:
         presence_cache_location_prefix += "locations/"
-        
+
     if cam_orientation == 'back' or cam_orientation == 'front':
         presence_cache_location_prefix += "cam/"+cam_orientation+'/'
-        
+
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
     conf_string = str(detection_confidence_requirement).replace('.','')
     csv_name = 'PRESENCE-'+method+'-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'_conf_'+conf_string+'.csv'
@@ -107,7 +107,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
     (csv_name, csv_path) = create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour, method=method, detection_confidence_requirement=detection_confidence_requirement)
     detections_cache_location_prefix = cache_location_prefix + "Detections/"
-    
+
     #Read and concat a number of hour-long csvs (note: this is because thekla memory crashes if attempting >16h at a time)
     detections_dfs = []
     for i in tqdm(range(0, num_hours)):
@@ -117,7 +117,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         detections_1h = pd.read_csv(detections_cache_location_prefix+csv_name, parse_dates=['timestamp'], usecols=['timestamp', 'bee_id'])
         detections_dfs.append(detections_1h)
     detections_df = pd.concat(detections_dfs)
-    
+
     #interval length is the total observation period divided by total number of intervals
     total_num_intervals = (num_intervals_per_hour*num_hours)
     interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
@@ -130,7 +130,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
     #Iterate over intervals and over detections
     #If a bee from bee_ids is detected within a given interval, mark the cell for that bee and interval with a '1'
-    
+
     interval_starttime = datetime_start
     # print("Processing intervals: ")
     for interval in tqdm(range(total_num_intervals)):
@@ -140,7 +140,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         before_end = detections_df['timestamp'] < interval_endtime
         interval_detections = detections_df[after_start & before_end]
         bee_row_number = 0
-        
+
         if method == 'binary':
             for bee in presence_df['id']:
                 if bee in interval_detections['bee_id'].unique():
@@ -150,11 +150,11 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
             counts = interval_detections['bee_id'].value_counts()
             keys = counts.keys().tolist()
             counts = counts.tolist()
-            
+
             for i in np.arange(0,len(counts)):
                 bee = keys[i]
                 presence_df.loc[bee, interval] = counts[i]
-                
+
         interval_starttime = interval_endtime
 
     #Saving the PRESENCE dataframe, marking every given bee's presence in a given interval
@@ -201,9 +201,11 @@ def cache_death_dates():
     df.to_csv(detections_cache_path+'Last_day_alive.csv')
     print('Saved last day alive for all bees')
 
-def cache_hatch_dates():
+def cache_first_detection_dates():
     """Pulls alive_bees_2016 from the Beesbook database
     and saves a dataframe with the first detection date for each bee to disk as "First_day_alive.csv" file.
+    WARNING: these are not the bees' birthdays - they might have hatched before the video recordings started.
+    Only meta.get_hatchdate is a reliable way of finding birthdays.
     """
 
     print('Loading bee alive states')
