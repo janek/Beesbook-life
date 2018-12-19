@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import os; os.getcwd()
+import sys
 sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/') #For bee_helpers, file_helpers and cache
 from bee_cache import Cache, CacheType, CacheFormat; c = Cache()
 
-from datetime import timedelta, datetime
+import datetime
 import time
 import random
 
@@ -90,9 +91,9 @@ def get_all_bee_ids():
 
 
 def get_alive_bees_for_day(date):
-    if isinstance(datetime.datetime, date):
+    if isinstance(date, datetime.datetime):
         date = date.date()
-    if isinstance(datetime.date, date) == False:
+    if isinstance(date, datetime.date) == False:
         raise TypeError('Date must be in a datetime or datetime.date format!')
     df = c.load('alive_bees_2016')
     df = df[df.timestamp == date]
