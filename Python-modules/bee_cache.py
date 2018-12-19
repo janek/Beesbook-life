@@ -44,9 +44,9 @@ class Cache:
 
         # TODO: why isn't this executed in new_presence?
         print('loading with type ' + str(type))
-        if type == CacheType.presence:
-            print("dropping")
-            df.index.rename('bee_id', inplace = True)
-            df.drop(columns=['Unnamed: 0', 'id'], inplace = True)
+#         if type == CacheType.presence:
+#             print("dropping")
+#             df.index.rename('bee_id', inplace = True)
+#             df.drop(columns=['Unnamed: 0', 'id'], inplace = True)
 
         return df
