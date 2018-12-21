@@ -38,7 +38,7 @@ class Cache:
         if format == CacheFormat.pickle:
             df = pd.read_pickle(path)
         elif format == CacheFormat.csv:
-            if type == CacheType.Detections:
+            if type == CacheType.detections:
                 df = pd.read_csv(parse_dates='timestamp')
             else:
                 df = pd.read_csv(path)
