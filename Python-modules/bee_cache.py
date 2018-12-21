@@ -40,7 +40,7 @@ class Cache:
         elif format == CacheFormat.csv:
             if type == CacheType.Detections:
                 df = pd.read_csv(parse_dates='timestamp')
-            else
+            else:
                 df = pd.read_csv(path)
         elif format == CacheFormat.hdf:
             df = pd.read_hdf(path)
