@@ -39,10 +39,18 @@ class Cache:
             df = pd.read_pickle(path)
         elif format == CacheFormat.csv:
             if type == CacheType.detections:
-                df = pd.read_csv(parse_dates='timestamp')
+                df = pd.read_csv(path, parse_dates=['timestamp'])
             else:
                 df = pd.read_csv(path)
         elif format == CacheFormat.hdf:
             df = pd.read_hdf(path)
 
         return df
+
+c = Cache()
+c.load("janek")
+
+mytype = CacheType.detections
+mytype
+
+mytype == CacheType.detections
