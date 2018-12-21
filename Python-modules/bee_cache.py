@@ -38,15 +38,11 @@ class Cache:
         if format == CacheFormat.pickle:
             df = pd.read_pickle(path)
         elif format == CacheFormat.csv:
-            df = pd.read_csv(path)
+            if type == CacheType.Detections:
+                df = pd.read_csv(parse_dates='timestamp')
+            else
+                df = pd.read_csv(path)
         elif format == CacheFormat.hdf:
             df = pd.read_hdf(path)
-
-        # TODO: why isn't this executed in new_presence?
-        print('loading with type ' + str(type))
-#         if type == CacheType.presence:
-#             print("dropping")
-#             df.index.rename('bee_id', inplace = True)
-#             df.drop(columns=['Unnamed: 0', 'id'], inplace = True)
 
         return df
