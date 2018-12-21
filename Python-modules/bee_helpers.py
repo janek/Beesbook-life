@@ -38,7 +38,7 @@ def calc_trip_lengths(presence_df, total_num_intervals):
 
 def calc_trip_starts(presence_df, total_num_intervals):
     '''Takes a Presence dataframe and total number of intervals
-    Returns and array of arrays containing intervall numbers when trips start of each consecutive bee'''
+    Returns and array of arrays containing interval numbers when trips start of each consecutive bee'''
     trip_starts = []
 
     for bee in range(0, presence_df.shape[0]):

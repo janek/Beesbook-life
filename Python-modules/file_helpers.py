@@ -100,15 +100,16 @@ def create_presence_cache_filename(num_hours,
 
 
 def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
+
     #TODO: add documentation-style comments
     if method != 'binary' and method != 'counts':
-        print('Please specify either binary or counts method.')
+        print('Please specify either binary or counts as method.')
         return None
 
     (csv_name, csv_path) = create_presence_cache_filename(num_hours, datetime_start, num_intervals_per_hour, method=method, detection_confidence_requirement=detection_confidence_requirement)
     detections_cache_location_prefix = cache_location_prefix + "Detections/"
 
-    #Read and concat a number of hour-long csvs (note: this is because thekla memory crashes if attempting >16h at a time)
+    # Read and concat a number of hour-long csvs (note: this is done hour-by-hour because thekla memory crashes if attempting >16h at a time)
     detections_dfs = []
     for i in tqdm(range(0, num_hours)):
         conf_string = str(detection_confidence_requirement).replace('.','')
@@ -118,7 +119,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         detections_dfs.append(detections_1h)
     detections_df = pd.concat(detections_dfs)
 
-    #interval length is the total observation period divided by total number of intervals
+    # interval length is the total observation period divided by total number of intervals
     total_num_intervals = (num_intervals_per_hour*num_hours)
     interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
 
