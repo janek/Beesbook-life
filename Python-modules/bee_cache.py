@@ -46,11 +46,3 @@ class Cache:
             df = pd.read_hdf(path)
 
         return df
-
-c = Cache()
-c.load("janek")
-
-mytype = CacheType.detections
-mytype
-
-mytype == CacheType.detections
