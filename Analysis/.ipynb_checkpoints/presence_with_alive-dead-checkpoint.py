@@ -25,6 +25,8 @@ presence.index.rename('bee_id', inplace = True)
 presence.drop(columns=['bee_id'], inplace = True)
 
 
+
+
 pres_sum = sum_presence_per_day(presence, alive_for_day)
 
 pres_sum['hatchdate'] = hatchdates['hatchdate']
