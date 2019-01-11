@@ -1,5 +1,7 @@
 import pandas as pd
 from enum import Enum
+import os; os.getcwd()
+
 
 class CacheType(Enum):
     other = "Other"
@@ -20,7 +22,6 @@ class Cache:
     def make_path(self, filename, type=CacheType.other, format=CacheFormat.pickle):
         return self.cache_location_prefix + type.value + "/" + filename + '.' + format.value
 
-
     def save(self, dataframe, filename, type=CacheType.other, format=CacheFormat.pickle):
         path = self.make_path(filename, type=type, format=format)
 
@@ -34,15 +35,25 @@ class Cache:
 
     def load(self, filename, type=CacheType.other, format=CacheFormat.pickle):
         path = self.make_path(filename, type=type, format=format)
+        df = pd.DataFrame()
 
         if format == CacheFormat.pickle:
             df = pd.read_pickle(path)
         elif format == CacheFormat.csv:
             if type == CacheType.detections:
                 df = pd.read_csv(path, parse_dates=['timestamp'])
+                df = df.drop(columns=['Unnamed: 0'])
             else:
                 df = pd.read_csv(path)
         elif format == CacheFormat.hdf:
             df = pd.read_hdf(path)
 
         return df
+
+
+
+# # Testing
+# cache = Cache()
+# det = cache.load("DETECTIONS-2016-07-25_15:00:00_conf_099", type = CacheType.detections, format = CacheFormat.csv)
+# det.shape
+# det.head()

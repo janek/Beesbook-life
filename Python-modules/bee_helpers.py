@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import os; os.getcwd()
 import sys
-sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/') #For bee_helpers, file_helpers and cache
+sys.path.append(os.getcwd()+'/Beesbook-janek/Python-modules/') #For bee_helpers, file_helpers and cache
 from bee_cache import Cache, CacheType, CacheFormat; c = Cache()
 
 import datetime

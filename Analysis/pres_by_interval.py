@@ -24,7 +24,7 @@ day = datetime.date(2016,8,9)
 # This should be alleviated by improving saving and/or doing the cleanup in the Cache class
 presence = c.load('PRESENCE-counts-2016-08-09_00_num_hours_24_int_size_120_conf_099', type=CacheType.presence, format=CacheFormat.csv)
 presence.index.rename('bee_id', inplace = True)
-presence.drop(columns=['bee_id'], inplace = True)
+presence.drop(columns=['Unnamed: 0', 'id'], inplace = True)
 presence.head()
 
 
@@ -38,7 +38,7 @@ foragers_for_day = foragers[foragers['date'] == day].index
 presence['was_foraging'] = False
 presence['was_foraging'][foragers_for_day] = True # TODO:
 
-
+foragers_for_day
 
 # Get alive bees for the chosen day and filter other (dead) bees out of the presence table
 bees_alive_for_day = get_alive_bees_for_day(day)['bee_id'].values
@@ -49,9 +49,24 @@ presence.shape # 1064 alivee bees x 2880 30sec intervals
 
 #%%
 # For a random bee, a plot of time vs presence score (i.e. for all intervals, how many detections per interval she has)
+# ids for good examples of anomalous detection: [607, 894, 912, 1003] (on 2016-08-09)
 bee_id = random.randint(0,presence.shape[0])
 plt.figure(figsize=(33,7))
 plt.scatter(np.arange(0,presence.shape[1]), presence.iloc[bee_id], s=0.5)
+plt.title("Bee " + str(bee_id))
+
+
+
+#%%
+# See the same plot for known foragers
+bee_id = random.choice(foragers_for_day)
+plt.figure(figsize=(33,7))
+plt.scatter(np.arange(0,presence.shape[1]), presence.loc[bee_id], s=0.5)
+
+print(bee_id)
+
+
+
 
 #%%
 df = presence.drop(columns=['was_foraging'])
