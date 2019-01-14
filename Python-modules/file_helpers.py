@@ -162,6 +162,9 @@ def detections_to_presence_deprecated(num_hours, datetime_start, num_intervals_p
     print("SAVED", csv_path)
     return csv_path
 
+
+
+
 def detections_to_presence_locations_deprecated(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
     #TODO: add documentation-style comments
 
@@ -196,7 +199,7 @@ def detections_to_presence_locations_deprecated(num_hours, datetime_start, num_i
 
     # prepare dataframe with zeros in the shape [total_num_bees x total_num_intervals]
     # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)))
+    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)]))
     bee_ids = pd.DataFrame(data={'id': bee_ids})
     presence_df = pd.concat([bee_ids, intervals], axis=1)
 
@@ -271,14 +274,14 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     desired_cams = cams
     undesired_cams = list(set(all_cams).symmetric_difference(desired_cams)) # all that are in all but not in desired are undesired
     for cam in undesired_cams:
-        print("filtering out cam " + str(cam)):
+        print("filtering out cam " + str(cam))
         detections_df = detections_df[(detections_df['cam_id']!=cam)]
 
 
     #3. Prepare a zeroes dataframe with presence intervals, to be filled up by information from detections_df
     # prepare shape [num_bees x num_intervals]
     # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)))
+    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)])
     bee_ids = pd.DataFrame(data={'id': bee_ids})
     presence_df = pd.concat([bee_ids, intervals], axis=1)
 
