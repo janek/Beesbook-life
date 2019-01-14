@@ -28,7 +28,7 @@ from bee_cache import CacheType, CacheFormat, Cache;
 # 1. Save one of each for future reference
 
 datetime_start = datetime.datetime(2016,8,9,15)
-num_hours = 2
+num_hours = 1
 num_intervals_per_hour = 120
 bee_ids = get_alive_bees_for_day(datetime_start.date()).bee_id.tolist()
 
@@ -37,6 +37,6 @@ bee_ids = get_alive_bees_for_day(datetime_start.date()).bee_id.tolist()
 df = detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
 
 
-dloc = detections_to_presence_locations(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
-dfront = detections_to_presence_locations_front(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
-dback = detections_to_presence_locations_back(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
+# dloc = detections_to_presence_locations(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
+# dfront = detections_to_presence_locations_front(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
+# dback = detections_to_presence_locations_back(num_hours, datetime_start, num_intervals_per_hour, bee_ids)
