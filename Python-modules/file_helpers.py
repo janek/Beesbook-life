@@ -80,7 +80,7 @@ def create_presence_cache_filename(num_hours,
                                    datetime_start,
                                    num_intervals_per_hour,
                                    locations=False,
-                                   cam_orientation='none',
+                                   cams=[1,2,3,4],
                                    method='binary',
                                    detection_confidence_requirement=0):
 
@@ -89,8 +89,6 @@ def create_presence_cache_filename(num_hours,
     if locations:
         presence_cache_location_prefix += "locations/"
 
-    if cam_orientation == 'back' or cam_orientation == 'front':
-        presence_cache_location_prefix += "cam/"+cam_orientation+'/'
 
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
     conf_string = str(detection_confidence_requirement).replace('.','')
@@ -99,7 +97,7 @@ def create_presence_cache_filename(num_hours,
     return (csv_name, csv_path)
 
 
-def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
+def detections_to_presence_deprecated(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
 
     #TODO: add documentation-style comments
     if method != 'binary' and method != 'counts':
@@ -130,7 +128,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     presence_df = pd.concat([bee_ids, intervals], axis=1)
 
     #Iterate over intervals and over detections
-    #If a bee from bee_ids is detected within a given interval, mark the cell for that bee and interval with a '1'
+    #Fill up infotmation by binary or by counts method
 
     interval_starttime = datetime_start
     # print("Processing intervals: ")
@@ -164,8 +162,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     print("SAVED", csv_path)
     return csv_path
 
-
-def detections_to_presence_locations(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
+def detections_to_presence_locations_deprecated(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
     #TODO: add documentation-style comments
 
 
@@ -196,21 +193,19 @@ def detections_to_presence_locations(num_hours, datetime_start, num_intervals_pe
         detections_df = pd.concat([detections_df, new_data])
         print('Num. rows after appending: '+str(detections_df.shape[0]))
 
-    total_num_intervals = (num_intervals_per_hour*num_hours)
-    interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
 
-    # prepare dataframe with zeros in the shape [bees x total_num_intervals]
+    # prepare dataframe with zeros in the shape [total_num_bees x total_num_intervals]
     # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),total_num_intervals]))
+    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)))
     bee_ids = pd.DataFrame(data={'id': bee_ids})
     presence_df = pd.concat([bee_ids, intervals], axis=1)
 
     #Iterate over intervals and over detections
     #If a bee from bee_ids is detected within a given interval, mark the cell for that bee and interval with a '1'
-
+    interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
     interval_starttime = datetime_start
     # print("Processing intervals: ")
-    for interval in range(total_num_intervals):
+    for interval in tqdm(range(total_num_intervals)):
         #choose detections for interval
         interval_endtime = interval_starttime + interval_length
         after_start = detections_df['timestamp'] >= interval_starttime
@@ -237,156 +232,105 @@ def detections_to_presence_locations(num_hours, datetime_start, num_intervals_pe
     print("SAVED", csv_path)
     return csv_path
 
-def detections_to_presence_locations_front(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
+def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids, cams=[0,1,2,3], method='binary', detection_confidence_requirement=0):
     #TODO: add documentation-style comments
 
+
+    if method != 'binary' and method != 'counts' and method != 'last_location':
+        print('Please specify either binary, counts or last_location as method.')
+        return None
+
+    # 1. Prepare paths and filenames
     (csv_name, csv_path) = create_presence_cache_filename(num_hours,
                                         datetime_start,
                                         num_intervals_per_hour,
                                         locations=True,
-                                        cam_orientation='front',
+                                        cams=cams,
                                         method=method,
                                         detection_confidence_requirement=detection_confidence_requirement)
 
     detections_cache_location_prefix = cache_location_prefix + "Detections/"
-    # Load first element before the loop, to have a table formatted nicely for appending
     conf_string = str(detection_confidence_requirement).replace('.','')
-    start_csv_name = "DETECTIONS-"+(datetime_start).strftime("%Y-%m-%d_%H:%M:%S")+'_conf_'+conf_string+".csv"
-    print('Processing '+detections_cache_location_prefix+start_csv_name+' before the loop')
 
-    detections_df = pd.read_csv(detections_cache_location_prefix+start_csv_name,
-                                parse_dates=['timestamp'],
-                                usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id'])
 
-    # Read and concat a number of hour-long csvs (note: this is because thekla memory crashes if attempting >16h at a time)
-    for i in tqdm(range(1, num_hours)):
+    # 2.Read and concat a given number of hour-long csvs (note: this is done hour-by-hour because thekla memory crashes if attempting >16h at a time)
+    detections_dfs = []
+    for i in tqdm(range(0, num_hours)):
+        conf_string = str(detection_confidence_requirement).replace('.','')
         csv_name = "DETECTIONS-" + (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+'_conf_'+conf_string+".csv"
         print('Processing '+csv_name)
-        new_data = pd.read_csv(detections_cache_location_prefix+csv_name,
-                               parse_dates=['timestamp'],
-                               usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id'])
+        detections_1h = pd.read_csv(detections_cache_location_prefix+csv_name,
+                                    parse_dates=['timestamp'],
+                                    usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id'])
+        detections_dfs.append(detections_1h)
+    detections_df = pd.concat(detections_dfs)
+    print('Num. rows after concatenating: '+str(detections_df.shape[0]))
 
-        detections_df = pd.concat([detections_df, new_data])
-        print('Num. rows after appending: '+str(detections_df.shape[0]))
+    # Filter out undesired cams (e.g. if we want only one side of the hive or only one cam)
+    all_cams = [0,1,2,3]
+    desired_cams = cams
+    undesired_cams = list(set(all_cams).symmetric_difference(desired_cams)) # all that are in all but not in desired are undesired
+    for cam in undesired_cams:
+        print("filtering out cam " + str(cam)):
+        detections_df = detections_df[(detections_df['cam_id']!=cam)]
 
-    #interval length is the total observation period divided by total number of intervals
-    total_num_intervals = (num_intervals_per_hour*num_hours)
-    interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
 
-    # prepare dataframe with zeros in the shape [bees x total_num_intervals]
+    #3. Prepare a zeroes dataframe with presence intervals, to be filled up by information from detections_df
+    # prepare shape [num_bees x num_intervals]
     # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),total_num_intervals]))
+    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)))
     bee_ids = pd.DataFrame(data={'id': bee_ids})
     presence_df = pd.concat([bee_ids, intervals], axis=1)
-    detections_df = detections_df[(detections_df['cam_id']<2)]
 
-    #Iterate over intervals and over detections
-    #If a bee from bee_ids is detected within a given interval, mark the cell for that bee and interval with a '1'
 
-    interval_starttime = datetime_start
-    # print("Processing intervals: ")
-    for interval in tqdm(range(total_num_intervals)):
-        #choose detections for interval
-        interval_endtime = interval_starttime + interval_length
-        after_start = detections_df['timestamp'] >= interval_starttime
-        before_end = detections_df['timestamp'] < interval_endtime
-        interval_detections = detections_df[after_start & before_end].fillna(0)
-        bee_row_number = 0
-        for bee in presence_df['id']:
-            if bee in interval_detections['bee_id'].unique():
-                #TODO: currently just taking the coordinate of the last detection in the interval, maybe change to the average of the interval later?
-                x_c = interval_detections['x_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
-                y_c = interval_detections['y_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
-                #y_c = detections_df.at[bee_row_number, 'y_pos_hive']
-                #orientation = detections_df.at[bee_row_number, 'orientation']
-                #loc = str(x_c[0])+":"+str(y_c[0])+":"+str(orientation[0])
-                #locx = (x_c[0], y_c[0])
-                coordinates = (round(x_c), round(y_c))
-                presence_df[interval] = presence_df[interval].astype(object)
-                presence_df.set_value(bee_row_number, interval, coordinates)
-            bee_row_number += 1
-        interval_starttime = interval_endtime
 
-    #Saving the ENCE dataframe, with 1's and 0's for bees present in a given interval
-    presence_df.to_csv(csv_path)
-    print("SAVED", csv_path)
-    return csv_path
-
-def detections_to_presence_locations_back(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
-    #TODO: add documentation-style comments
-
-    (csv_name, csv_path) = create_presence_cache_filename(num_hours,
-                                        datetime_start,
-                                        num_intervals_per_hour,
-                                        locations=True,
-                                        cam_orientation='back',
-                                        method=method,
-                                        detection_confidence_requirement=detection_confidence_requirement)
-
-    detections_cache_location_prefix = cache_location_prefix + "Detections/"
-    conf_string = str(detection_confidence_requirement).replace('.','')
-    start_csv_name = "DETECTIONS-"+(datetime_start).strftime("%Y-%m-%d_%H:%M:%S")+'_conf_'+conf_string+".csv"
-    print('Processing '+detections_cache_location_prefix+start_csv_name+' before the loop')
-
-    detections_df = pd.read_csv(detections_cache_location_prefix+start_csv_name,
-                                parse_dates=['timestamp'],
-                                usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id'])
-
-    # Read and concat a number of hour-long csvs (note: this is because thekla memory crashes if attempting >16h at a time)
-    for i in tqdm(range(1, num_hours)):
-        csv_name = "DETECTIONS-" + (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+'_conf_'+conf_string+".csv"
-        print('Processing '+csv_name)
-        new_data = pd.read_csv(detections_cache_location_prefix+csv_name,
-                               parse_dates=['timestamp'],
-                               usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id'])
-
-        detections_df = pd.concat([detections_df, new_data])
-        print('Num. rows after appending: '+str(detections_df.shape[0]))
-
-    #interval length is the total observation period divided by total number of intervals
-    total_num_intervals = (num_intervals_per_hour*num_hours)
+    # 4. Iterate over intervals and over detections to fill up infotmation
+    # using user's chosen method (binary/counts/last_location)
     interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
-
-    # prepare dataframe with zeros in the shape [bees x total_num_intervals]
-    # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),total_num_intervals]))
-    # bee_ids = pd.DataFrame(data={'id': bee_ids})
-    presence_df = pd.concat([bee_ids, intervals], axis=1)
-    detections_df = detections_df[(detections_df['cam_id']>1)]
-
-    #Iterate over intervals and over detections
-    #If a bee from bee_ids is detected within a given interval, mark the cell for that bee and interval with a '1'
-
     interval_starttime = datetime_start
-    # print("Processing intervals: ")
+
     for interval in tqdm(range(total_num_intervals)):
         #choose detections for interval
         interval_endtime = interval_starttime + interval_length
         after_start = detections_df['timestamp'] >= interval_starttime
         before_end = detections_df['timestamp'] < interval_endtime
         interval_detections = detections_df[after_start & before_end].fillna(0)
-        bee_row_number = 0
-        for bee in presence_df['id']:
-            if bee in interval_detections['bee_id'].unique():
-                #TODO: currently just taking the coordinate of the last detection in the interval, maybe change to the average of the interval later?
-                x_c = interval_detections['x_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
-                y_c = interval_detections['y_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
-                #y_c = detections_df.at[bee_row_number, 'y_pos_hive']
-                #orientation = detections_df.at[bee_row_number, 'orientation']
-                #loc = str(x_c[0])+":"+str(y_c[0])+":"+str(orientation[0])
-                #locx = (x_c[0], y_c[0])
-                coordinates = (round(x_c), round(y_c))
-                presence_df[interval] = presence_df[interval].astype(object)
-                presence_df.set_value(bee_row_number, interval, coordinates)
-            bee_row_number += 1
+
+        if method == 'binary':
+            bee_row_number = 0
+            for bee in presence_df['id']:
+                if bee in interval_detections['bee_id'].unique():
+                    presence_df.set_value(bee_row_number, interval, 1)
+                bee_row_number += 1
+
+        elif method = 'last_location':
+            bee_row_number = 0
+            for bee in presence_df['id']:
+                if bee in interval_detections['bee_id'].unique():
+                    #TODO: currently just taking the coordinate of the last detection in the interval, maybe change to the average of the interval later?
+                    x_c = interval_detections['x_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
+                    y_c = interval_detections['y_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
+                    coordinates = (round(x_c), round(y_c))
+                    presence_df[interval] = presence_df[interval].astype(object) # Generalize type of the cells to handle (x,y) coordinate tuples
+                    presence_df.set_value(bee_row_number, interval, coordinates) # Fill in the cell
+                bee_row_number += 1
+
+        elif method == 'counts':
+            counts = interval_detections['bee_id'].value_counts()
+            keys = counts.keys().tolist()
+            counts = counts.tolist()
+
+            for i in np.arange(0,len(counts)):
+                bee = keys[i]
+                presence_df.loc[bee, interval] = counts[i]
+
+
         interval_starttime = interval_endtime
 
     #Saving the ENCE dataframe, with 1's and 0's for bees present in a given interval
     presence_df.to_csv(csv_path)
     print("SAVED", csv_path)
     return csv_path
-
-
 
 
 def delete_detection_caches_for_date(date_string, directory=detections_cache_path):
@@ -617,8 +561,6 @@ def calculate_bee_lifespans_combined():
     lifespan = lifespan['lifespan']
     lifespan = filter_out_fake_deaths(lifespan)
     return lifespan
-
-
 
 def filter_out_fake_deaths(lifespans):
     """Takes a lifespans dataframe and filters out bee ids
