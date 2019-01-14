@@ -74,8 +74,6 @@ def cache_detections_from_database(datetime_start, observ_period, num_observ_per
         df.to_csv(filepath)
         datetime_start = datetime_end
 
-
-
 def create_presence_cache_filename(num_hours,
                                    datetime_start,
                                    num_intervals_per_hour,
@@ -95,7 +93,6 @@ def create_presence_cache_filename(num_hours,
     csv_name = 'PRESENCE-'+method+'-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'_conf_'+conf_string+'.csv'
     csv_path = presence_cache_location_prefix+csv_name
     return (csv_name, csv_path)
-
 
 def detections_to_presence_deprecated(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
 
@@ -161,9 +158,6 @@ def detections_to_presence_deprecated(num_hours, datetime_start, num_intervals_p
 
     print("SAVED", csv_path)
     return csv_path
-
-
-
 
 def detections_to_presence_locations_deprecated(num_hours, datetime_start, num_intervals_per_hour, bee_ids, method='binary', detection_confidence_requirement=0):
     #TODO: add documentation-style comments
@@ -281,7 +275,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     #3. Prepare a zeroes dataframe with presence intervals, to be filled up by information from detections_df
     # prepare shape [num_bees x num_intervals]
     # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)])
+    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)]))
     bee_ids = pd.DataFrame(data={'id': bee_ids})
     presence_df = pd.concat([bee_ids, intervals], axis=1)
 
@@ -306,7 +300,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
                     presence_df.set_value(bee_row_number, interval, 1)
                 bee_row_number += 1
 
-        elif method = 'last_location':
+        elif method == 'last_location':
             bee_row_number = 0
             for bee in presence_df['id']:
                 if bee in interval_detections['bee_id'].unique():
