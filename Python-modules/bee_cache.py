@@ -42,18 +42,12 @@ class Cache:
         elif format == CacheFormat.csv:
             if type == CacheType.detections:
                 df = pd.read_csv(path, parse_dates=['timestamp'])
-                df = df.drop(columns=['Unnamed: 0'])
             else:
                 df = pd.read_csv(path)
+            if 'Unnamed: 0' in df.columns: #TODO: test and make sure this runs
+                df.drop(columns=['Unnamed: 0'], inplace=True)
+
         elif format == CacheFormat.hdf:
             df = pd.read_hdf(path)
 
         return df
-
-
-
-# # Testing
-# cache = Cache()
-# det = cache.load("DETECTIONS-2016-07-25_15:00:00_conf_099", type = CacheType.detections, format = CacheFormat.csv)
-# det.shape
-# det.head()

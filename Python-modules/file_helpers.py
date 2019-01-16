@@ -5,7 +5,8 @@ import bb_utils
 import bb_utils.meta
 import bb_utils.ids
 import bb_backend
-from datetime import timedelta, datetime
+# from datetime import timedelta
+import datetime
 import time
 import psycopg2
 import psycopg2.extras
@@ -76,77 +77,73 @@ def cache_detections_from_database(datetime_start, observ_period, num_observ_per
 def create_presence_cache_filename(num_hours,
                                    datetime_start,
                                    num_intervals_per_hour,
-                                   locations=False,
                                    cams=[1,2,3,4],
                                    method='binary',
                                    detection_confidence_requirement=0):
 
     presence_cache_location_prefix = cache_location_prefix + "Presence/"
 
-    if locations:
-        presence_cache_location_prefix += "locations/"
-
-
     date_string = (datetime_start).strftime("%Y-%m-%d_%H")
     conf_string = str(detection_confidence_requirement).replace('.','')
-    csv_name = 'PRESENCE-'+method+'-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'_conf_'+conf_string+'.csv'
+    cams_string = ''.join(str(x) for x in cams)
+    csv_name = 'PRESENCE-'+method+'-'+str(date_string)+"_num_hours_"+str(num_hours)+"_int_size_"+str(num_intervals_per_hour)+'_conf_'+conf_string+'_cams_'+cams_string+'.csv'
     csv_path = presence_cache_location_prefix+csv_name
     return (csv_name, csv_path)
 
-def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids, cams=[0,1,2,3], method='binary', detection_confidence_requirement=0):
-    #TODO: add documentation-style comments
+def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids, cams=[0,1,2,3], method='binary', detection_confidence_requirement=0, return_mode='path'):
+    """Reads a number of DETECTION csvs, combines them into one and converts to a measurement of presence guided by the specified method
+       and filtered by specified cam numbers. Saves the PRESENCE cache and returns the path to the saved file.
 
-    if method != 'binary' and method != 'counts' and method != 'last_location':
-        print('Please specify either binary, counts or last_location as method.')
+    Output: A PRESENCE dataframe (csv file), of size [bee_ids x total_num_intervals]. Contents depend on method (see below in Args).
+
+    Args:
+        num_hours(int): number of hours to be processed, i.e. number of hour-long DETECTION csv files to be loaded and operated on
+        datetime_start (datetime): the starting point of the observations we want to pull
+        num_intervals_per_hour (int):  number of intervals per hour. e.g. a value 120 means that one interval covers 30secs of real time
+        bee_ids ([int]):  list of bee ids to be taken into account
+        cams ([int]): list of desired cams; all cams = [0,1,2,3]; front cams = [0,1]; back cams = [2,3]
+        method (string): 'binary' will return 0 and 1, 1 if the given bee was detected at least once in the given interal
+                         'counts' will return a value from 0 to MAX, representing how many times the bee was detected during the given interval
+        detection_confidence_requirement (float): how high the database value for detection confidence needs to be for this function to include that detection
+    """
+
+    if method != 'binary' and method != 'counts' and method != 'last-location':
+        print('Please specify either binary, counts or last-location as method.')
         return None
 
     # 1. Prepare paths and filenames
     (csv_name, csv_path) = create_presence_cache_filename(num_hours,
                                         datetime_start,
                                         num_intervals_per_hour,
-                                        locations=True,
                                         cams=cams,
                                         method=method,
-                                        detection_confidence_requirement=0) # TEST: Should not be a hardcoded value
+                                        detection_confidence_requirement=detection_confidence_requirement)
 
     detections_cache_location_prefix = cache_location_prefix + "Detections/"
     conf_string = str(detection_confidence_requirement).replace('.','')
 
-
     # 2.Read and concat a given number of hour-long csvs (note: this is done hour-by-hour because thekla memory crashes if attempting >16h at a time)
     detections_dfs = []
     for i in tqdm(range(0, num_hours)):
-        conf_string = str(detection_confidence_requirement).replace('.','')
-        csv_name = "DETECTIONS-" + (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+'_conf_'+conf_string+'.csv' #TEST: remove the suffix
-        print('Processing '+csv_name)
+        csv_name = "DETECTIONS-" + (datetime_start + timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+'_conf_'+conf_string+'.csv'
         detections_1h = pd.read_csv(detections_cache_location_prefix+csv_name,
                                     parse_dates=['timestamp'],
                                     usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id'])
+        # 2a. Filter detections to only come from desired cams
+        detections_1h = detections_1h[detections_1h.cam_id.isin(cams)]
         detections_dfs.append(detections_1h)
     detections_df = pd.concat(detections_dfs)
     print('Num. rows after concatenating: '+str(detections_df.shape[0]))
 
-    # Filter out undesired cams (e.g. if we want only one side of the hive or only one cam)
-    all_cams = [0,1,2,3]
-    desired_cams = cams
-    undesired_cams = list(set(all_cams).symmetric_difference(desired_cams)) # all that are in all but not in desired are undesired
-    for cam in undesired_cams:
-        print("filtering out cam " + str(cam))
-        detections_df = detections_df[(detections_df['cam_id']!=cam)]
-
-
     #3. Prepare a zeroes dataframe with presence intervals, to be filled up by information from detections_df
     # prepare shape [num_bees x num_intervals]
-    # append bee_ids from the left
-    intervals = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)]))
-    bee_ids = pd.DataFrame(data={'id': bee_ids})
-    presence_df = pd.concat([bee_ids, intervals], axis=1)
-
-
+    presence_df = pd.DataFrame(data=np.zeros([len(bee_ids),(num_intervals_per_hour*num_hours)]))
+    presence_df.index = bee_ids
 
     # 4. Iterate over intervals and over detections to fill up infotmation
-    # using user's chosen method (binary/counts/last_location)
-    interval_length = timedelta(hours=num_hours) // (num_intervals_per_hour*num_hours)
+    # using user's chosen method (binary/counts/last-location)
+    total_num_intervals = num_intervals_per_hour*num_hours
+    interval_length = timedelta(hours=num_hours) // total_num_intervals
     interval_starttime = datetime_start
 
     for interval in tqdm(range(total_num_intervals)):
@@ -163,7 +160,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
                     presence_df.set_value(bee_row_number, interval, 1)
                 bee_row_number += 1
 
-        elif method == 'last_location':
+        elif method == 'last-location':
             bee_row_number = 0
             for bee in presence_df['id']:
                 if bee in interval_detections['bee_id'].unique():
@@ -182,15 +179,18 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
             for i in np.arange(0,len(counts)):
                 bee = keys[i]
-                presence_df.loc[bee, interval] = counts[i]
-
+                # If the bee id had some detections, but wasn't among the bees marked as alive for that day, we ignore it
+                if bee in bee_ids:
+                    presence_df.at[bee, interval] = counts[i]
 
         interval_starttime = interval_endtime
 
-    #Saving the ENCE dataframe, with 1's and 0's for bees present in a given interval
     presence_df.to_csv(csv_path)
     print("SAVED", csv_path)
-    return csv_path
+    if return_mode == 'path':
+        return csv_path
+    elif return_mode == 'data':
+        return presence_df
 
 
 def delete_detection_caches_for_date(date_string, directory=detections_cache_path):
@@ -206,8 +206,6 @@ def delete_detection_caches_for_date(date_string, directory=detections_cache_pat
                     os.unlink(file_path)
             except Exception as e:
                 print(e)
-
-
 
 def cache_death_dates():
     """Pulls alive_bees_2016 from the Beesbook database
@@ -379,7 +377,7 @@ def calculate_bee_lifespans_from_hatchdates():
     lifespan = filter_out_fake_deaths(lifespan)
     return lifespan
 
-    #TODO: returns a Series, while other two lifespan functions return a Dateframe
+#TODO: returns a Series, while other two lifespan functions return a Dateframe
 def calculate_bee_lifespans_from_detections():
     last_alive_path = detections_cache_path+'Last_day_alive.csv'
     first_alive_path = detections_cache_path+'First_day_alive.csv'
