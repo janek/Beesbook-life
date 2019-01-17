@@ -45,8 +45,13 @@ class Cache:
             else:
                 df = pd.read_csv(path)
             if 'Unnamed: 0' in df.columns: #TODO: test and make sure this runs
+                print('dropping unnamed')
+                df.index = df['Unnamed: 0']
                 df.drop(columns=['Unnamed: 0'], inplace=True)
-
+            if 'id' in df.columns:
+                print('reindexing to id, droppping id as a col')
+                df.index = df.id
+                df.drop(columns=['id'])
         elif format == CacheFormat.hdf:
             df = pd.read_hdf(path)
 

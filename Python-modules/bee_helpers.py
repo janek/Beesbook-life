@@ -101,5 +101,4 @@ def get_alive_bees_for_day(date):
 
 
 #TODO: make a single function or a single class out of get_bee functions
-#TODO: get bees that are alive on a certain day
 #TODO: get bees of a certain age for a given day
