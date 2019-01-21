@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import os; os.getcwd()
 import sys
-sys.path.append(os.getcwd()+'/Beesbook-life/Python-modules/') #For bee_helpers, file_helpers and cache
+sys.path.append(os.getcwd()+'/Beesbook-janek/Python-modules/') #For bee_helpers, file_helpers and cache
 from bee_cache import Cache, CacheType, CacheFormat; c = Cache()
 
 import datetime
@@ -97,9 +97,9 @@ def get_alive_bees_for_day(date):
         raise TypeError('Date must be in a datetime or datetime.date format!')
     df = c.load('alive_bees_2016')
     df = df[df.timestamp == date]
+    ids = df.bee_id
     return df
 
 
 #TODO: make a single function or a single class out of get_bee functions
-#TODO: get bees that are alive on a certain day
-#TODO: get bees of a certain age for a given day
+#TODO: get bees of a given age (group) for a given day
