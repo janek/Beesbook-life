@@ -14,7 +14,7 @@ class CacheFormat(Enum):
 
 
 class Cache:
-    def __init__(self, location = "/home/mi/rrszynka/mnt/janek/caches/"):
+    def __init__(self, location = "/home/mi/rrszynka/caches/"):
         self.cache_location_prefix = location
 
     def make_path(self, filename, type=CacheType.other, format=CacheFormat.pickle):
