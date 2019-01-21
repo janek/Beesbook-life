@@ -16,6 +16,7 @@ from tqdm import tqdm
 from pathlib import Path
 import datetime
 from datetime import timedelta
+#%%
 
 
 # bb_backend.api.server_adress = 'localhost:8000'
@@ -23,7 +24,7 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #removed storage from filepath
 
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = "/home/mi/rrszynka/"+"caches/"
+cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/"
 detections_cache_path = cache_location_prefix + "Detections/"
 
 
@@ -94,6 +95,15 @@ def create_presence_cache_filename(num_hours,
     csv_path = presence_cache_location_prefix+csv_name
     return (csv_name, csv_path)
 
+
+def create_detections_cache_filename(datetime_start, interval_size=datetime.timedelta(hours=1)):
+    detections_cache_location_prefix = cache_location_prefix + "Detections/"
+    date_string = (datetime_start).strftime('%Y-%m-%d_%H:%M:%S')
+    csv_name = "DETECTIONS-" + date_string + '.csv'
+    csv_path = detections_cache_location_prefix+csv_name
+    return (csv_name, csv_path)
+
+
 def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, bee_ids, cams=[0,1,2,3], method='binary', detection_confidence_requirement=0, return_mode='data'):
     """Reads a number of DETECTION csvs, combines them into one and converts to a measurement of presence guided by the specified method
        and filtered by specified cam numbers. Saves the PRESENCE cache and returns the path to the saved file OR the data itself (depending on return_mode)
@@ -137,13 +147,13 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
     # First check if all files exist
     for i in range(0, num_hours):
-        csv_name = "DETECTIONS-" + (datetime_start + datetime.timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+'.csv'
-        if os.path.isfile(detections_cache_location_prefix+csv_name) == False:
-            raise ValueError('File missing: ' + csv_name + ' (and potentially more)')
+        (csv_name, csv_pathname) = create_detections_cache_filename(datetime_start + datetime.timedelta(hours=i))
+        if os.path.isfile(csv_pathname == False):
+            raise ValueError('File missing: ' + csv_pathname + ' (and potentially more)')
 
     # Then read and concat them
     for i in tqdm(range(0, num_hours)):
-        csv_name = "DETECTIONS-" + (datetime_start + datetime.timedelta(hours=i)).strftime("%Y-%m-%d_%H:%M:%S")+'.csv'
+        (csv_name, csv_pathname) = create_detections_cache_filename(datetime_start + datetime.timedelta(hours=i))
         detections_1h = pd.read_csv(detections_cache_location_prefix+csv_name,
                                     parse_dates=['timestamp'],
                                     usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id', 'bee_id_confidence'])
