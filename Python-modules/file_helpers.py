@@ -79,9 +79,9 @@ def cache_detections_from_database(datetime_start, observ_period=datetime.timede
 # cache_detections_from_database(datetime.datetime(2016,7,20)) #TEST
 #2.68 mins per hour of detections at midnight
 
-def create_presence_cache_filename(num_hours,
-                                   datetime_start,
-                                   num_intervals_per_hour,
+def create_presence_cache_filename(datetime_start,
+                                   num_hours=24,
+                                   num_intervals_per_hour=120,
                                    cams=[1,2,3,4],
                                    method='binary',
                                    detection_confidence_requirement=0):
@@ -127,8 +127,8 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         return None
 
     # 1. Prepare paths and filenames
-    (csv_name, csv_path) = create_presence_cache_filename(num_hours,
-                                        datetime_start,
+    (csv_name, csv_path) = create_presence_cache_filename(datetime_start,
+                                        num_hours,
                                         num_intervals_per_hour,
                                         cams=cams,
                                         method=method,
@@ -308,10 +308,10 @@ def last_days_caches(num_hours, num_intervals_per_hour, number_last_days):
         temp_locations_front_df = pd.DataFrame()
         temp_locations_back_df = pd.DataFrame()
         for day in range(number_last_days):
-            (presence_name, presence_path) = create_presence_cache_filename(num_hours, last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_intervals_per_hour)
-            (locations_name, locations_path) = create_presence_locations_cache_filename(num_hours, last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_intervals_per_hour)
-            (locations_front_name, locations_front_path) = create_presence_locations_cam_cache_filename(num_hours, last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_intervals_per_hour, "front/")
-            (locations_back_name, locations_back_path) = create_presence_locations_cam_cache_filename(num_hours, last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_intervals_per_hour, "back/")
+            (presence_name, presence_path) = create_presence_cache_filename(last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_hours, num_intervals_per_hour)
+            (locations_name, locations_path) = create_presence_locations_cache_filename(last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_hours, num_intervals_per_hour)
+            (locations_front_name, locations_front_path) = create_presence_locations_cam_cache_filename(last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_hours, num_intervals_per_hour, "front/")
+            (locations_back_name, locations_back_path) = create_presence_locations_cam_cache_filename(last_day_alive_df.loc[ix][1].date()-datetime.timedelta(days=day+1), num_hours, num_intervals_per_hour, "back/")
 
             new_presence_df = pd.read_csv(presence_path)
             new_presence_df = new_presence_df.loc[new_presence_df['id'] == ix]

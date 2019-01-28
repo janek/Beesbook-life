@@ -14,6 +14,9 @@ from bee_cache import Cache, CacheType, CacheFormat; c = Cache()
 from bee_helpers import calc_trip_lengths, get_forager_bee_ids, get_random_bee_ids, get_all_bee_ids, get_alive_bees_for_day
 import bb_utils
 import random
+import plotly
+import cufflinks
+plotly.tools.set_credentials_file(username='DemoAccount', api_key='lr1c37zw81')
 # %%
 
 
