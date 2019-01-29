@@ -5,7 +5,7 @@ from file_helpers import create_presence_cache_filename
 import datetime
 from pathlib import Path
 
-
+#%%
 class CacheType(Enum):
     other = "Other"
     detections = "Detections"
@@ -78,42 +78,35 @@ class Cache:
         experiment_length = (experiment_end_date - experiment_start_date).days
 
         presences = []
-        skipped = 0
-        added = 0
-
         for i in range(experiment_length):
             date = experiment_start_date + datetime.timedelta(days=i)
             # Go through all days, note down which are missing, report that. Combine the rest into a list of presences.
             (csv_name, csv_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
 
             file = Path(csv_path)
-            if file.exists() == False:
-                print("File " + str(file) + " does not exist, moving on")
-                skipped += 1
-                continue
-            else:
-                added += 1
-                presences.append(self.load_presence_for_date(date))
+            if file.exists():
+                presences.append((date, self.load_presence_for_date(date)))
 
-        print("Collected " + str(added) + "/" + str(experiment_length)+ " presence caches (all that are currently downloaded)." )
+        print("Collected " + str(len(presences)) + "/" + str(experiment_length)+ " presence caches (all that are currently downloaded)." )
         return presences
 
+#%%
 
 
 
 
+c = Cache()
+a = c.load_all_presence_caches()
 
+#%%
+for x in a:
+    print(x[0], x[1].sum().sum())
 
-
-
-
-
-
-
-
-
-
-
+#%%
+experiment_start_date = datetime.date(2016,7,20)
+experiment_end_date = datetime.date(2016,9,19)
+experiment_length = (experiment_end_date - experiment_start_date).days
+experiment_length
 
 ### SCRATCHPAD for testing this class etc
 # c = Cache()
