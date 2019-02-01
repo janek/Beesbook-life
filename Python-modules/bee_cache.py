@@ -4,6 +4,7 @@ import os; import sys; sys.path.append(os.getcwd()+'/Beesbook-janek/Python-modul
 from file_helpers import create_presence_cache_filename
 import datetime
 from pathlib import Path
+from tqdm import tqdm
 
 #%%
 class CacheType(Enum):
@@ -24,7 +25,7 @@ class PresenceCacheType(Enum):
 
 
 class Cache:
-    def __init__(self, location = "/home/mi/rrszynka/mnt/janek/caches/"):
+    def __init__(self, location = "/home/mi/rrszynka/mnt/janek/caches/"): #TODO: this is overridden in file helpers, go there and fix that
         self.cache_location_prefix = location
 
     def make_path(self, filename, type=CacheType.other, format=CacheFormat.pickle):
@@ -72,22 +73,24 @@ class Cache:
         presence_df = self.load(csv_name, type=CacheType.presence, format=CacheFormat.csv)
         return presence_df
 
-    def load_all_presence_caches(self, detection_confidence_requirement=0.99):
+    def load_all_presence_caches(self, detection_confidence_requirement=0.99): #TODO: add cams param with default = 0,1,2,3
         experiment_start_date = datetime.date(2016,7,20)
         experiment_end_date = datetime.date(2016,9,19)
         experiment_length = (experiment_end_date - experiment_start_date).days
-
         presences = []
-        for i in range(experiment_length):
+        for i in tqdm(range(experiment_length+1)):
             date = experiment_start_date + datetime.timedelta(days=i)
             # Go through all days, note down which are missing, report that. Combine the rest into a list of presences.
             (csv_name, csv_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
 
             file = Path(csv_path)
             if file.exists():
+                # print("Appending:     " + str(csv_path))
                 presences.append((date, self.load_presence_for_date(date)))
+            # else:
+            #     print("Doesn't exist: " + str(csv_path))
 
-        print("Collected " + str(len(presences)) + "/" + str(experiment_length)+ " presence caches (all that are currently downloaded)." )
+        print("Collected " + str(len(presences)) + "/" + str(experiment_length+1)+ " presence caches (all that are currently downloaded)." )
         return presences
 
 #%%
@@ -95,18 +98,18 @@ class Cache:
 
 
 
-c = Cache()
-a = c.load_all_presence_caches()
+# c = Cache()
+# a = c.load_all_presence_caches()
 
-#%%
-for x in a:
-    print(x[0], x[1].sum().sum())
+# #%%
+# for x in a:
+#     print(x[0], x[1].sum().sum())
 
-#%%
-experiment_start_date = datetime.date(2016,7,20)
-experiment_end_date = datetime.date(2016,9,19)
-experiment_length = (experiment_end_date - experiment_start_date).days
-experiment_length
+# #%%
+# experiment_start_date = datetime.date(2016,7,20)
+# experiment_end_date = datetime.date(2016,9,19)
+# experiment_length = (experiment_end_date - experiment_start_date).days
+# experiment_length
 
 ### SCRATCHPAD for testing this class etc
 # c = Cache()

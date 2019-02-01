@@ -24,7 +24,7 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #removed storage from filepath
 
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/"
+cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/" # "/home/mi/rrszynka/mnt/janek"+"caches/" for mnt 
 detections_cache_path = cache_location_prefix + "Detections/"
 
 
