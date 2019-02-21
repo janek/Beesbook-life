@@ -16,7 +16,7 @@ class CacheType(Enum):
 class CacheFormat(Enum):
     csv = "csv"
     pickle = "pkl"
-    hdf = "h5"
+    hdf = "hdf5"
 
 class PresenceCacheType(Enum):
     binary = "binary"

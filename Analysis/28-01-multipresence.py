@@ -95,7 +95,6 @@ print()
 
 
 
-
 #FUNCTIONS - BINARIZATION
 #TODO: merge into one (currently they are separate for single bey and all bees )
 #DONE: tested if outputs are the same whether ([] -> bin -> select_row) or ([] -> select_row -> bin)

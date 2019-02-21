@@ -16,6 +16,7 @@ from tqdm import tqdm
 from pathlib import Path
 import datetime
 from datetime import timedelta
+import sys
 #%%
 
 
@@ -24,7 +25,7 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #removed storage from filepath
 
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
-cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/" # "/home/mi/rrszynka/mnt/janek"+"caches/" for mnt 
+cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/" # "/home/mi/rrszynka/mnt/janek"+"caches/" for mnt
 detections_cache_path = cache_location_prefix + "Detections/"
 
 
@@ -97,10 +98,9 @@ def create_presence_cache_filename(datetime_start,
 
 
 def create_detections_cache_filename(datetime_start, interval_size=datetime.timedelta(hours=1)):
-    detections_cache_location_prefix = cache_location_prefix + "Detections/"
     date_string = (datetime_start).strftime('%Y-%m-%d_%H:%M:%S')
     csv_name = "DETECTIONS-" + date_string + '.csv'
-    csv_path = detections_cache_location_prefix+csv_name
+    csv_path = detections_cache_path+csv_name
     return (csv_name, csv_path)
 
 
@@ -122,8 +122,8 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         return_mode: 'path' or 'data'
     """
 
-    if method != 'binary' and method != 'counts' and method != 'last-location':
-        print('Please specify either binary, counts or last-location as method.')
+    if method not in ['binary', 'counts', 'last-location', 'mean-location']:
+        print('Please specify a method.')
         return None
 
     # 1. Prepare paths and filenames
@@ -134,7 +134,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
                                         method=method,
                                         detection_confidence_requirement=detection_confidence_requirement)
 
-    detections_cache_location_prefix = cache_location_prefix + "Detections/"
+
     conf_string = str(detection_confidence_requirement).replace('.','')
 
     if os.path.isfile(csv_path):
@@ -142,7 +142,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         return
 
 
-    # 2.Read and concat a given number of hour-long csvs (note: this is done hour-by-hour because thekla memory crashes if attempting >16h at a time)
+    # 2.Read and concat a given number of hour-long csvs (note: this was done hour-by-hour because thekla memory would crash if attempting >16h at a time)
     detections_dfs = []
 
     # First check if all files exist
@@ -154,7 +154,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     # Then read and concat them
     for i in tqdm(range(0, num_hours)):
         (csv_name, csv_pathname) = create_detections_cache_filename(datetime_start + datetime.timedelta(hours=i))
-        detections_1h = pd.read_csv(detections_cache_location_prefix+csv_name,
+        detections_1h = pd.read_csv(detections_cache_path+csv_name,
                                     parse_dates=['timestamp'],
                                     usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id', 'bee_id_confidence'])
         # 2a. Filter detections to only come from desired cams
@@ -165,8 +165,12 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
 
     # 2b. Filter detections to be over a certain confidence threshold
     rows_total = detections_df.shape[0]
+
     print('Num. rows after concatenating: ' + str(rows_total))
+    fout = detections_df[detections_df['bee_id_confidence'] < detection_confidence_requirement]
+    print('dreq = ' + str(detection_confidence_requirement) +' Will filter out ' + str(fout.shape[0]) + ' rows')
     detections_df = detections_df[detections_df['bee_id_confidence'] > detection_confidence_requirement]
+
     print('Num. rows after confidence filtering : ' + str(detections_df.shape[0]) + " (percentage: " + str(detections_df.shape[0]/rows_total) + ")")
 
 
@@ -189,25 +193,15 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         interval_detections = detections_df[after_start & before_end].fillna(0)
 
         if method == 'binary':
+            # if bee id is detected at least once in this interval, put 1; otherwise put 0
             bee_row_number = 0
-            for bee in presence_df['id']:
+            for bee in presence_df.index:
                 if bee in interval_detections['bee_id'].unique():
                     presence_df.set_value(bee_row_number, interval, 1)
                 bee_row_number += 1
 
-        elif method == 'last-location':
-            bee_row_number = 0
-            for bee in presence_df['id']:
-                if bee in interval_detections['bee_id'].unique():
-                    #TODO: currently just taking the coordinate of the last detection in the interval, maybe change to the average of the interval later?
-                    x_c = interval_detections['x_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
-                    y_c = interval_detections['y_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
-                    coordinates = (round(x_c), round(y_c))
-                    presence_df[interval] = presence_df[interval].astype(object) # Generalize type of the cells to handle (x,y) coordinate tuples
-                    presence_df.set_value(bee_row_number, interval, coordinates) # Fill in the cell
-                bee_row_number += 1
-
         elif method == 'counts':
+            # save the number of times a given bee_id was detected in this interval
             counts = interval_detections['bee_id'].value_counts()
             keys = counts.keys().tolist()
             counts = counts.tolist()
@@ -218,6 +212,28 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
                 if bee in bee_ids:
                     presence_df.at[bee, interval] = counts[i]
 
+        elif method == 'last-location':
+            bee_row_number = 0
+            for bee in presence_df.index:
+                if bee in interval_detections['bee_id'].unique():
+                    #TODO: currently just taking the coordinate of the last detection in the interval, maybe change to the average of the interval later?
+                    x_c = interval_detections['x_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
+                    y_c = interval_detections['y_pos_hive'][(interval_detections['bee_id'] == bee)].tail(1).values.item()
+                    coordinates = (round(x_c), round(y_c))
+                    presence_df[interval] = presence_df[interval].astype(object) # Generalize type of the cells to handle (x,y) coordinate tuples
+                    presence_df.set_value(bee_row_number, interval, coordinates) # Fill in the cell
+                bee_row_number += 1
+
+        elif method == 'mean-location':
+            for bee in presence_df.index:
+                if bee in interval_detections['bee_id'].unique():
+                    #TODO: currently just taking the coordinate of the last detection in the interval, maybe change to the average of the interval later?
+                    x_c = interval_detections['x_pos_hive'][(interval_detections['bee_id'] == bee)].mean()
+                    y_c = interval_detections['y_pos_hive'][(interval_detections['bee_id'] == bee)].mean()
+                    coordinates = (round(x_c), round(y_c))
+                    presence_df[interval] = presence_df[interval].astype(object) # Generalize type of the cells to handle (x,y) coordinate tuples
+                    presence_df.at[bee, interval] = coordinates # Fill in the cell
+
         interval_starttime = interval_endtime
 
     presence_df.to_csv(csv_path)
@@ -226,6 +242,21 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         return csv_path
     elif return_mode == 'data':
         return presence_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def delete_detection_caches_for_date(date_string, directory=detections_cache_path):
     # date_string must be in MM-DD_hh:mm:ss format
