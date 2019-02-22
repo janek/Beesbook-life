@@ -1,6 +1,5 @@
 from bb_behavior import plot
 from bb_behavior import db as bbdb
-from bb_behavior import plot
 import bb_behavior
 import pandas as pd
 import os
@@ -9,8 +8,8 @@ sys.path.append('/home/mi/rrszynka/mnt/janek/Beesbook-janek/Python-modules/') #F
 from bee_cache import Cache, CacheType, CacheFormat; c = Cache()
 import datetime
 from bb_behavior import db as bbdb
+from skimage.morphology import rectangle, closing
 import datetime
-
 import numpy as np
 from tqdm import tqdm
 #%%
@@ -20,7 +19,7 @@ FPS = 3
 
 # Get all days that we have cached
 #%%
-presences = c.load_all_presence_caches()
+presences = c.load_presence_caches(3)
 
 #%%
 bee_id = 10
@@ -28,12 +27,10 @@ pres_date = presences[2][0]
 presx = presences[2][1].loc[bee_id]
 
 
-
 presx[presx > 90] = 90
 presbin = binarize_presence_row(presx)
 
-plot_presence(presx)
-plot_presence(presbin)
+
 
 exit_timestamps = get_timestamps_from_row(presbin, pres_date, mode='exits')
 entry_timestamps = get_timestamps_from_row(presbin, pres_date, mode='entries')
@@ -43,36 +40,30 @@ ex_df = pd.Series(exit_timestamps)
 frame_ids = [get_frame_id_for_bee_id_and_timestamp(bee_id, ts.astype(datetime.datetime)) for ts in exit_timestamps]
 
 
-d = {'timestamp':exit_timestamps, 'frame':frame_ids}
-exits = pd.DataFrame(data=d)
-
+exits = pd.DataFrame(data={'timestamp':exit_timestamps, 'frame':frame_ids})
 exits = exits.dropna() # NOTE: note the NaN somehow?
 # %%
 
-presx
-
-
-#%%
 
 
 
-presx[1202.0]
 
-time = exits.iloc[0].timestamp.time()
+
 
 #%%
-for i, row in exits[5:8].iterrows():
+# GENERATE VIDEO
+for i, row in tqdm(exits[8:11].iterrows()):
     bee = bee_id
     timestamp = row.timestamp
     frame = row.frame
 
 
     # ASK: can this be used given hiccups? or just take days w/o hiccups?
-    interval_margin = 1
+    interval_margin = 2
     frames_per_interval = INTERVAL_SIZE*FPS
     frame_margin = interval_margin*frames_per_interval #30s * 3FPS
 
-    name = str(bee)+'_exitX2_' + str(i)
+    name = str(bee)+'_exitX3_' + str(i)
     video = plot.plot_bees(bee_ids=[bee],
                        frame_id=frame, frame_margin=frame_margin,
                        path_alpha=None, bt_export=None, # '/home/mi/rrszynka/mnt/janek/caches/Videos/bt_export/'+name+".json",
@@ -86,24 +77,29 @@ for i, row in exits[5:8].iterrows():
     secs = time_to_secs(middle_timestamp)
     interval_index_mid = int(secs/30)
     print(timestamp, interval_index_mid)
-    interval_index_start = interval_index_mid - interval_margin
+    start_interval = interval_index_mid - interval_margin
 
 
     for i, frame in enumerate(video._frames):
         interval_index = (i // frames_per_interval)
         #get pres_score and pres_bin values
-        frame._title = "\n INTERVAL: " + str(interval_index) + "/" + str(interval_margin*2 - 1) + "\n PRES_SCORE: " + str(presx[interval_index_start + i]) + "PRES: " + str(presbin[interval_index_start + i])
-        print(interval_index, i, presx[interval_index_start+i])
-
+        frame._title = "\n INTERVAL: " + str(interval_index) + "/" + str(interval_margin*2 - 1) + "\n PRES_SCORE: " + str(presx[start_interval + interval_index]) + "PRES: " + str(presbin[start_interval + interval_index])
     video._crop_margin = None
     video.get_video(save_to_path='/home/mi/rrszynka/mnt/janek/caches/Videos/' + name + ".mp4")
 
 
-def time_to_secs(time):
-    return time.hour * 3600 + time.minute * 60 + time.second
 
-# %%
-def get_presence_for_timestamp(timestamp):
+
+
+
+#%%
+
+# plot_presence(presx)
+# plot_presence(presbin)
+
+
+
+
 
 
 
@@ -136,3 +132,30 @@ def get_timestamps_from_row(row, date, mode='both'):
 
     timepoint_timestamps = [npdate + np.timedelta64(int(timepoint)*30, 's') for timepoint in timepoints]
     return timepoint_timestamps
+
+
+
+def time_to_secs(time):
+    return time.hour * 3600 + time.minute * 60 + time.second
+
+
+
+
+#%%
+def binarize_presence_row(presence_for_day_series):
+    # TODO: running this on an already-binarized series will return all zeros,
+    # (and that's not what we want) - changing the threshold solves it, but try sth else
+    ys = presence_for_day_series.copy()
+    if ys[ys>1].sum() == 0:
+        #Consider this already binarized, make no changes
+        return ys
+
+    ys[ys>90] = 90
+    ys[ys>45] = 90
+    ys[ys<=45] = 0 #TODO: consult: what should the threshold be
+    ys[ys==90] = 1
+
+    ys = np.reshape(np.array(ys, dtype=np.int32),[1,ys.shape[0]])
+    ys = closing(ys, rectangle(1,15))
+    ys = ys.flatten()
+    return ys

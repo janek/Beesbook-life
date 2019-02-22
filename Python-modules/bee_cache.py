@@ -93,6 +93,28 @@ class Cache:
         print("Collected " + str(len(presences)) + "/" + str(experiment_length+1)+ " presence caches (all that are currently downloaded)." )
         return presences
 
+
+    def load_presence_caches(self, amount, detection_confidence_requirement=0.99): #TODO: add cams param with default = 0,1,2,3
+        experiment_start_date = datetime.date(2016,7,20)
+        experiment_end_date = datetime.date(2016,9,19)
+        experiment_length = (experiment_end_date - experiment_start_date).days
+        presences = []
+        for i in tqdm(range(amount)):
+            date = experiment_start_date + datetime.timedelta(days=i)
+            # Go through all days, note down which are missing, report that. Combine the rest into a list of presences.
+            (csv_name, csv_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
+
+            file = Path(csv_path)
+            if file.exists():
+                # print("Appending:     " + str(csv_path))
+                presences.append((date, self.load_presence_for_date(date)))
+            # else:
+            #     print("Doesn't exist: " + str(csv_path))
+
+        print("Collected " + str(len(presences)) + "/" + str(experiment_length+1)+ " presence caches (all that are currently downloaded)." )
+        return presences
+
+
 #%%
 
 
