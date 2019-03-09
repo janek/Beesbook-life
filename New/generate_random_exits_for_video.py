@@ -15,13 +15,15 @@ from tqdm import tqdm
 import random
 #%%
 
-INTERVAL_SIZE = 30
-FPS = 3
-NUM_DAYS= 62
+
+num_days= 62
+
+
+detection_confidence_requirement = 0.2
 
 
 # Get all cached days (or consider excluding some)
-presences = c.load_presence_caches(amount=NUM_DAYS)
+# presences = c.load_presence_caches(amount=num_days, detection_confidence_requirement=detection_confidence_requirement)
 
 presences_bin = []
 for (date, presence) in tqdm(presences):

@@ -1,7 +1,7 @@
 import pandas as pd
 from enum import Enum
 import os; import sys; sys.path.append(os.getcwd()+'/Beesbook-janek/Python-modules')
-from file_helpers import create_presence_cache_filename
+from file_helpers import create_presence_cache_filename, create_gaps_cache_filename
 import datetime
 from pathlib import Path
 from tqdm import tqdm
@@ -11,6 +11,7 @@ class CacheType(Enum):
     other = "Other"
     detections = "Detections"
     presence = "Presence"
+    gaps = "Gaps"
     trips = "Trips"
 
 class CacheFormat(Enum):
@@ -68,12 +69,14 @@ class Cache:
 
         return df
 
-    def load_presence_for_date(self, date, detection_confidence_requirement=0.99):
-        (csv_name, csv_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=0.99, cams=[0,1,2,3])
-        presence_df = self.load(csv_name, type=CacheType.presence, format=CacheFormat.csv)
+    def load_presence_for_date(self, date, detection_confidence_requirement=0.666):
+        (file_name, file_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
+        print('loading ' + file_name)
+        presence_df = self.load(file_name, type=CacheType.presence, format=CacheFormat.csv)
         return presence_df
 
-    def load_all_presence_caches(self, detection_confidence_requirement=0.99): #TODO: add cams param with default = 0,1,2,3
+    #DEPRECATED: delete soon
+    def load_all_presence_caches(self, detection_confidence_requirement=0.666): #TODO: add cams param with default = 0,1,2,3
         experiment_start_date = datetime.date(2016,7,20)
         experiment_end_date = datetime.date(2016,9,19)
         experiment_length = (experiment_end_date - experiment_start_date).days
@@ -81,39 +84,42 @@ class Cache:
         for i in tqdm(range(experiment_length+1)):
             date = experiment_start_date + datetime.timedelta(days=i)
             # Go through all days, note down which are missing, report that. Combine the rest into a list of presences.
-            (csv_name, csv_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
+            (file_name, file_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
 
-            file = Path(csv_path)
+            file = Path(file_path)
             if file.exists():
-                # print("Appending:     " + str(csv_path))
+                # print("Appending:     " + str(file_path))
                 presences.append((date, self.load_presence_for_date(date)))
             # else:
-            #     print("Doesn't exist: " + str(csv_path))
+            #     print("Doesn't exist: " + str(file_path))
 
         print("Collected " + str(len(presences)) + "/" + str(experiment_length+1)+ " presence caches (all that are currently downloaded)." )
         return presences
 
 
-    def load_presence_caches(self, amount, detection_confidence_requirement=0.99): #TODO: add cams param with default = 0,1,2,3
+    def load_multiple_day_caches(self, amount=62, type=CacheType.presence, detection_confidence_requirement=0.666, days_delta=0): #TODO: add cams param with default = 0,1,2,3
         experiment_start_date = datetime.date(2016,7,20)
         experiment_end_date = datetime.date(2016,9,19)
         experiment_length = (experiment_end_date - experiment_start_date).days
-        presences = []
+        start_date = experiment_start_date + datetime.timedelta(days=days_delta)
+        caches = []
+
         for i in tqdm(range(amount)):
-            date = experiment_start_date + datetime.timedelta(days=i)
+            date = start_date + datetime.timedelta(days=i)
             # Go through all days, note down which are missing, report that. Combine the rest into a list of presences.
-            (csv_name, csv_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
-
-            file = Path(csv_path)
+            if type == CacheType.presence:
+                (file_name, file_path) = create_presence_cache_filename(date, method='counts', detection_confidence_requirement=detection_confidence_requirement, cams=[0,1,2,3])
+            elif type == CacheType.gaps:
+                (file_name, file_path) = create_gaps_cache_filename(date, detection_confidence_requirement=detection_confidence_requirement)
+            file = Path(file_path)
             if file.exists():
-                # print("Appending:     " + str(csv_path))
-                presences.append((date, self.load_presence_for_date(date)))
-            # else:
-            #     print("Doesn't exist: " + str(csv_path))
+                if type == CacheType.presence:
+                    caches.append((date, self.load_presence_for_date(date, detection_confidence_requirement=detection_confidence_requirement)))
+                elif type == CacheType.gaps:
+                    caches.append(self.load(file_name, type=type))
 
-        print("Collected " + str(len(presences)) + "/" + str(experiment_length+1)+ " presence caches (all that are currently downloaded)." )
-        return presences
-
+        print("Collected " + str(len(caches)) + "/" + str(experiment_length+1)+ " per-day caches." )
+        return caches
 
 #%%
 

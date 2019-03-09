@@ -27,7 +27,7 @@ connect_str = """dbname='beesbook' user='reader' host='tonic.imp.fu-berlin.de' p
 #TODO: defined here, main notebook and file_helpers - how to extract it to be just in one place?
 cache_location_prefix = "/home/mi/rrszynka/mnt/janek/"+"caches/" # "/home/mi/rrszynka/mnt/janek"+"caches/" for mnt
 detections_cache_path = cache_location_prefix + "Detections/"
-
+alternate_detections_cache_path = '/home/mi/rrszynka/caches/Detections/'
 
 def cache_detections_from_database(datetime_start, observ_period=datetime.timedelta(hours=1), num_observ_periods=24):
     """Pulls detections from the Beesbook database
@@ -80,6 +80,7 @@ def cache_detections_from_database(datetime_start, observ_period=datetime.timede
 # cache_detections_from_database(datetime.datetime(2016,7,20)) #TEST
 #2.68 mins per hour of detections at midnight
 
+#DEPRECATED
 def create_presence_cache_filename(datetime_start,
                                    num_hours=24,
                                    num_intervals_per_hour=120,
@@ -96,11 +97,21 @@ def create_presence_cache_filename(datetime_start,
     csv_path = presence_cache_location_prefix+csv_name
     return (csv_name, csv_path)
 
+def create_gaps_cache_filename(date,
+                               detection_confidence_requirement=0):
+    gaps_cache_location_prefix = cache_location_prefix + "Gaps/"
+    conf_string = str(detection_confidence_requirement).replace('.','')
+    csv_name = 'GAPS-'+str(date)+'_conf_'+conf_string+'.pkl'
+    csv_path = gaps_cache_location_prefix+csv_name
+    return (csv_name, csv_path)
 
-def create_detections_cache_filename(datetime_start, interval_size=datetime.timedelta(hours=1)):
+
+def create_detections_cache_filename(datetime_start, interval_size=datetime.timedelta(hours=1), alternate_location=False):
     date_string = (datetime_start).strftime('%Y-%m-%d_%H:%M:%S')
     csv_name = "DETECTIONS-" + date_string + '.csv'
     csv_path = detections_cache_path+csv_name
+    if alternate_location == True:
+        csv_path = alternate_detections_cache_path + csv_name
     return (csv_name, csv_path)
 
 
@@ -121,7 +132,7 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
         detection_confidence_requirement (float): how high the database value for detection confidence needs to be for this function to include that detection
         return_mode: 'path' or 'data'
     """
-
+    print('HI')
     if method not in ['binary', 'counts', 'last-location', 'mean-location']:
         print('Please specify a method.')
         return None
@@ -145,16 +156,23 @@ def detections_to_presence(num_hours, datetime_start, num_intervals_per_hour, be
     # 2.Read and concat a given number of hour-long csvs (note: this was done hour-by-hour because thekla memory would crash if attempting >16h at a time)
     detections_dfs = []
 
+
+    files = []
     # First check if all files exist
     for i in range(0, num_hours):
         (csv_name, csv_pathname) = create_detections_cache_filename(datetime_start + datetime.timedelta(hours=i))
-        if os.path.isfile(csv_pathname == False):
-            raise ValueError('File missing: ' + csv_pathname + ' (and potentially more)')
+        if os.path.isfile(csv_pathname) == False:
+            # Try the other location
+            (csv_name, csv_pathname) = create_detections_cache_filename(datetime_start + datetime.timedelta(hours=i), alternate_location=True)
+            print("not found on mnt, trying now locally: " + csv_pathname)
+            if os.path.isfile(csv_pathname) == False:
+                raise ValueError('File missing: ' + csv_pathname + ' (and potentially more)')
+            files.append((csv_name, csv_pathname))
 
     # Then read and concat them
     for i in tqdm(range(0, num_hours)):
-        (csv_name, csv_pathname) = create_detections_cache_filename(datetime_start + datetime.timedelta(hours=i))
-        detections_1h = pd.read_csv(detections_cache_path+csv_name,
+        (csv_name, csv_pathname) = files[i]
+        detections_1h = pd.read_csv(csv_pathname,
                                     parse_dates=['timestamp'],
                                     usecols=['timestamp', 'bee_id', 'x_pos_hive', 'y_pos_hive', 'orientation', 'cam_id', 'bee_id_confidence'])
         # 2a. Filter detections to only come from desired cams
